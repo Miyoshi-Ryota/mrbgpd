@@ -1,14 +1,23 @@
-struct PacketBuffer;
-
-enum BGPVersion{
-    V1,
-    V2,
-    V3,
-    V4,
+struct BgpMessageHeader {
+    length: u16,
+    type_: BgpMessageType,
 }
 
-impl PacketBuffer {
-    fn get_version(&self) -> BGPVersion {
-        BGPVersion::V4
-    }
+enum BgpMessageType {
+    Open,
+    Update,
+    Notification,
+    Keepalive,
+}
+
+struct BgpOpenMessage;
+struct BgpUpdateMessage;
+struct BgpNotificationMessage;
+struct BgpKeepaliveMessage;
+
+enum BgpMessage {
+    Open(BgpOpenMessage),
+    Update(BgpUpdateMessage),
+    Notification(BgpNotificationMessage),
+    Keepalive(BgpKeepaliveMessage),
 }
