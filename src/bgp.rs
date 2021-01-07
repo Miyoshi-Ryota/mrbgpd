@@ -26,6 +26,7 @@ struct BgpOpenMessage {
     hold_time: HoldTime,
     bgp_identifier: Ipv4Addr,
     optional_parameter_length: u8, // すでにパース後であるこのデータストラクチャには不要かも
+    optional_parameters: Vec<OptionalParameter>,
 }
 
 struct OptionalParameter {
