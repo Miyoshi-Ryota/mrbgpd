@@ -33,6 +33,48 @@ struct BgpKeepaliveMessage {
     header: BgpMessageHeader,
 }
 
+struct BgpNotificationMessage{
+    header: BgpMessageHeader,
+    error_code: BgpErrorCode,
+    data: Vec<u8>, // とりあえず
+}
+
+enum BgpErrorCode {
+    MessageHeaderError(MessageHeaderErrorSubcode),
+    OpenMessageError(OpenMessageErrorSubCode),
+    UpdateMessageError(UpdateMessageErrorSubcode),
+    HoldTimerExpired,
+    FaniteStateMachineError,
+    Cease,
+}
+
+enum MessageHeaderErrorSubcode {
+    ConnectionNotSynchronized,
+    BadMessageLength,
+    BadMessageType,
+}
+
+enum OpenMessageErrorSubCode {
+    UnsupportedVersionNumber,
+    BadPeerAs,
+    BadBgpIdentifier,
+    UnsupportedOptionalParameter,
+    UnacceptableHoldTime,
+}
+
+enum UpdateMessageErrorSubcode {
+    MalformedAttributeList,
+    UnrecognizedWellKnownAttribute,
+    MissingWellKnownAttribute,
+    AttributeFlagsError,
+    AttributeLengthError,
+    InvalidOriginAttribute,
+    InvalidNextHopAttribute,
+    OptinalAttributeError,
+    InvalidNetworkField,
+    MalformedAsPath,
+}
+
 struct OptionalParameter {
     type_: BgpOpenMessageOptionalParameterType,
     length: u8, // すでにパース後であるこのデータストラクチャには不要かも
@@ -47,7 +89,6 @@ struct HoldTime(u16);
 struct AutonomousSystemNumber(u16);
 
 struct BgpUpdateMessage;
-struct BgpNotificationMessage;
 
 enum BgpMessage {
     Open(BgpOpenMessage),
