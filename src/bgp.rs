@@ -29,6 +29,10 @@ struct BgpOpenMessage {
     optional_parameters: Vec<OptionalParameter>,
 }
 
+struct BgpKeepaliveMessage {
+    header: BgpMessageHeader,
+}
+
 struct OptionalParameter {
     type_: BgpOpenMessageOptionalParameterType,
     length: u8, // すでにパース後であるこのデータストラクチャには不要かも
@@ -44,7 +48,6 @@ struct AutonomousSystemNumber(u16);
 
 struct BgpUpdateMessage;
 struct BgpNotificationMessage;
-struct BgpKeepaliveMessage;
 
 enum BgpMessage {
     Open(BgpOpenMessage),
