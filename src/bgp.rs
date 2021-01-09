@@ -29,6 +29,17 @@ struct BgpOpenMessage {
     optional_parameters: Vec<OptionalParameter>,
 }
 
+struct BgpUpdateMessage {
+    withdrawn_routes_length: u16,
+    withdrawn_routes: Vec<IpPrefix>,
+    total_path_attribute_length: u16,
+    path_attributes: Vec<PathAttribute>,
+}
+
+struct IpPrefix;
+
+struct PathAttribute;
+
 struct BgpKeepaliveMessage {
     header: BgpMessageHeader,
 }
@@ -87,8 +98,6 @@ enum BgpOpenMessageOptionalParameterType {
 
 struct HoldTime(u16);
 struct AutonomousSystemNumber(u16);
-
-struct BgpUpdateMessage;
 
 enum BgpMessage {
     Open(BgpOpenMessage),
