@@ -1,6 +1,6 @@
-use std::time::{Duration, SystemTime};
+use std::{time::{Duration, SystemTime}};
 
-struct SessionAttribute {
+pub struct SessionAttribute {
     state: State,
     connect_retry_counter: usize,
     connect_retry_timer: Duration,
@@ -11,7 +11,40 @@ struct SessionAttribute {
     keepalive_time: SystemTime,
 }
 
-enum Event {
+impl SessionAttribute {
+    pub fn new() -> Self {
+        SessionAttribute {
+            state: State::Idle,
+            connect_retry_counter: 0,
+            connect_retry_timer: Duration::new(0, 0),
+            connect_retry_time: SystemTime::now(),
+            hold_timer: Duration::new(0, 0),
+            hold_time: SystemTime::now(),
+            keepalive_timer: Duration::new(0, 0),
+            keepalive_time: SystemTime::now(),
+        }
+    }
+
+    fn get_state(&self) -> &State {
+        &self.state
+    }
+
+    pub fn handle_event(&mut self, event: &Event) {
+        // ToDo: ちゃんとimplさせる。
+        match self.get_state() {
+            &State::Idle => {
+                // Event を Matchでハンドルさせる。
+                ()
+            },
+            &State::Connect => (),
+            &State::Active => (),
+            &State::OpenConfirm => (),
+            &State::Established => (),
+        };
+    }
+}
+
+pub enum Event {
     // Administrative Event
     ManualStart, // Event 1
     ManualStop, // Event 2
