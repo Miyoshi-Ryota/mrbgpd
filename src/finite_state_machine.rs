@@ -56,9 +56,92 @@ impl fsm {
                     },
                     _ => (),
                 };
-                // Event を Matchでハンドルさせる。
             },
-            &State::Connect => (),
+            &State::Connect => {
+                match event {
+                    &Event::ManualStop => {
+                        // - drops the TCP connection,
+                        // - releases all BGP resources,
+                        // - sets ConnectRetryCounter to zero,
+                        // - stops the ConnectRetryTimer and sets ConnectRetryTimer to
+                        //   zero, and                
+                        // - changes its state to Idle.
+                    },
+                    &Event::ConnectRetryTimerExpires => {
+                        // - drops the TCP connection,
+                        // - restarts the ConnectRetryTimer,
+                        // - stops the DelayOpenTimer and resets the timer to zero,
+                        // - initiates a TCP connection to the other BGP peer,
+                        // - continues to listen for a connection that may be initiated by
+                        //   the remote BGP peer, and
+                        // - stays in the Connect state.
+                    },
+                    &Event::TcpCrAcked | &Event::TcpConnectionConfirmed => {
+                        // If the TCP connection succeeds (Event 16 or Event 17), the local
+                        // system checks the DelayOpen attribute prior to processing.  If the
+                        // DelayOpen attribute is set to TRUE, the local system:
+                        // - DelayOpenAttributeは実装しておらず常にFALSEなので省略
+ 
+                        // If the DelayOpen attribute is set to FALSE, the local system:
+                        // - stops the ConnectRetryTimer (if running) and sets the
+                        //   ConnectRetryTimer to zero,
+                        // - completes BGP initialization
+                        // - sends an OPEN message to its peer,
+                        // - sets the HoldTimer to a large value, and
+                        // - changes its state to OpenSent. 
+                        // A HoldTimer value of 4 minutes is suggested.
+                    },
+                    &Event::TcpConnectionFails => {
+                        // If the TCP connection fails (Event 18), the local system checks
+                        // the DelayOpenTimer.  If the DelayOpenTimer is running, the local
+                        // If the DelayOpenTimer is not running, the local system:
+                        // - stops the ConnectRetryTimer to zero,
+                        // - drops the TCP connection,
+                        // - releases all BGP resources, and
+                        // - changes its state to Idle.
+                    },
+                    &Event::BgpHeaderErr | &Event::BgpOpenMsgErr => {
+                        // If BGP message header checking (Event 21) or OPEN message checking 
+                        // detects an error (Event 22) (see Section 6.2), the local system:
+                        // - (optionally) If the SendNOTIFICATIONwithoutOPEN attribute is
+                        //   set to TRUE, then the local system first sends a NOTIFICATION
+                        //   message with the appropriate error code, and then
+                        // - stops the ConnectRetryTimer (if running) and sets the
+                        //   ConnectRetryTimer to zero,
+                        // - releases all BGP resources,
+                        // - drops the TCP connection,
+                        // - increments the ConnectRetryCounter by 1,
+                        // - (optionally) performs peer oscillation damping if the
+                        //   DampPeerOscillations attribute is set to TRUE, and
+                        // - changes its state to Idle.
+                    },
+                    &Event::NotifMsgVerErr => {
+                        // If a NOTIFICATION message is received with a version error (Event
+                        // 24), the local system checks the DelayOpenTimer.  If the
+                        // DelayOpenTimer is running, the local system:
+                        // If the DelayOpenTimer is not running, the local system:
+                        // - stops the ConnectRetryTimer and sets the ConnectRetryTimer to
+                        //   zero,
+                        // - releases all BGP resources,
+                        // - drops the TCP connection,
+                        // - increments the ConnectRetryCounter by 1,
+                        // - performs peer oscillation damping if the DampPeerOscillations
+                        //   attribute is set to True, and
+                        // - changes its state to Idle.
+                    },
+                    _ => {
+                        // If the DelayOpenTimer is not running, the local system:
+                        // - stops the ConnectRetryTimer and sets the ConnectRetryTimer to
+                        //   zero,
+                        // - releases all BGP resources,
+                        // - drops the TCP connection,
+                        // - increments the ConnectRetryCounter by 1,
+                        // - performs peer oscillation damping if the DampPeerOscillations
+                        //   attribute is set to True, and
+                        // - changes its state to Idle.
+                    }
+                }
+            },
             &State::Active => (),
             &State::OpenConfirm => (),
             &State::Established => (),
