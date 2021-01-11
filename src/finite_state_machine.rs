@@ -32,7 +32,12 @@ enum Event {
     KeepAliveMsg, // Event 26
     UpdateMsg, // Event 27
     UpdateMsgErr, // Event 28
-
 }
 
+enum State {
+    Idle,
+    Connect,
+    Active,
+    OpenConfirm,
+    Established,
 }
