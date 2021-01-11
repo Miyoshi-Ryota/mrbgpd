@@ -1,4 +1,4 @@
-use mrbgpd::finite_state_machine::{SessionAttribute, Event};
+use mrbgpd::finite_state_machine::{fsm, Event};
 
 fn get_event() -> Event {
     // Todo: Eventをいい感じに返すように
@@ -6,7 +6,7 @@ fn get_event() -> Event {
 }
 
 fn main() {
-    let mut fsm = SessionAttribute::new();
+    let mut fsm = fsm::new();
     loop {
         let event = get_event();
         fsm.handle_event(&event);
