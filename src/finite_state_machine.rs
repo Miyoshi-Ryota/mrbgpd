@@ -17,6 +17,7 @@ pub struct SessionAttribute {
 pub struct fsm {
     session_attribute: SessionAttribute,
     tcp_listener: Option<net::TcpListener>,
+    tcp_connection: Option<net::TcpStream>,
     packet_buffer: [u8; 1024],
 }
 
@@ -24,10 +25,12 @@ impl fsm {
     pub fn new() -> Self {
         let session_attribute = SessionAttribute::new();
         let tcp_listener = None;
+        let tcp_connection = None;
         let packet_buffer = [0u8; 1024];
         Self { 
             session_attribute,
             tcp_listener,
+            tcp_connection,
             packet_buffer,
         }
     }
@@ -52,6 +55,7 @@ impl fsm {
                         self.session_attribute.connect_retry_counter = 0;
                         self.session_attribute.connect_retry_timer = std::time::Duration::from_secs(0);
                         self.tcp_listener = Some(TcpListener::bind("0.0.0.0:179").expect("port 179が使用できません。"));
+                        self.tcp_connection = Some(self.tcp_listener.as_ref().unwrap().accept().unwrap().0);
                         self.session_attribute.state = State::Connect;
                     },
                     _ => (),
