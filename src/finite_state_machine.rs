@@ -65,11 +65,17 @@ impl fsm {
                 match event {
                     &Event::ManualStop => {
                         // - drops the TCP connection,
+                        self.tcp_connection.as_ref().unwrap().shutdown(std::net::Shutdown::Both).unwrap();
+                        self.tcp_connection = None;
                         // - releases all BGP resources,
+                        self.packet_buffer = [0u8; 1024];
                         // - sets ConnectRetryCounter to zero,
+                        self.session_attribute.connect_retry_counter = 0;
                         // - stops the ConnectRetryTimer and sets ConnectRetryTimer to
-                        //   zero, and                
+                        //   zero, and
+                        self.session_attribute.connect_retry_timer = Duration::from_secs(0);
                         // - changes its state to Idle.
+                        self.session_attribute.state = State::Idle;
                     },
                     &Event::ConnectRetryTimerExpires => {
                         // - drops the TCP connection,
