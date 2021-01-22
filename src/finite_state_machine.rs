@@ -35,7 +35,7 @@ impl fsm {
         }
     }
 
-    fn get_state(&self) -> &State {
+    pub fn get_state(&self) -> &State {
         self.session_attribute.get_state()
     }
 
@@ -201,7 +201,8 @@ pub enum Event {
     UpdateMsgErr, // Event 28
 }
 
-enum State {
+#[derive(Debug)]
+pub enum State {
     Idle,
     Connect,
     Active,

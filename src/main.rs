@@ -8,6 +8,7 @@ fn get_event() -> Event {
 fn main() {
     let mut fsm = fsm::new();
     loop {
+        println!("{:?}", fsm.get_state());
         let event = get_event();
         fsm.handle_event(&event);
     }
