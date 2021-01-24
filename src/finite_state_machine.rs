@@ -78,7 +78,7 @@ impl fsm {
                         self.session_attribute.connect_retry_counter = 0;
                         self.session_attribute.connect_retry_timer = std::time::Duration::from_secs(0);
                         self.tcp_listener = None;
-                        self.tcp_connection = net::TcpStream::connect("192.168.2.14").ok();
+                        self.tcp_connection = net::TcpStream::connect("192.168.2.14:179").ok();
                         self.session_attribute.state = State::Connect;
                     },
                     _ => (),
