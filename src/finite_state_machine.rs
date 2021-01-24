@@ -19,6 +19,27 @@ pub struct fsm {
     tcp_listener: Option<net::TcpListener>,
     tcp_connection: Option<net::TcpStream>,
     packet_buffer: [u8; 1024],
+    pub event_queue: EventQueue,
+}
+
+pub struct EventQueue {
+    data: Vec<Event>,
+}
+
+impl EventQueue {
+    pub fn new() -> Self {
+        Self {
+            data: vec![]
+        }
+    }
+
+    pub fn push(&mut self, event: Event) {
+        self.data.push(event);
+    }
+
+    pub fn pop(&mut self) -> Option<Event> {
+        self.data.pop()
+    }
 }
 
 impl fsm {
@@ -26,12 +47,14 @@ impl fsm {
         let session_attribute = SessionAttribute::new();
         let tcp_listener = None;
         let tcp_connection = None;
+        let event_queue = EventQueue::new();
         let packet_buffer = [0u8; 1024];
         Self { 
             session_attribute,
             tcp_listener,
             tcp_connection,
             packet_buffer,
+            event_queue,
         }
     }
 
