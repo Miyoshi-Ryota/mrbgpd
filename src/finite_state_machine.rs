@@ -1,7 +1,7 @@
+use crate::Config;
 use std::{time::{Duration, SystemTime}};
 use std::net;
 use std::{thread, time};
-
 use net::{TcpListener, TcpStream};
 
 pub struct SessionAttribute {
@@ -16,6 +16,7 @@ pub struct SessionAttribute {
 }
 
 pub struct fsm {
+    config: Config,
     session_attribute: SessionAttribute,
     tcp_listener: Option<net::TcpListener>,
     tcp_connection: Option<net::TcpStream>,
@@ -44,13 +45,14 @@ impl EventQueue {
 }
 
 impl fsm {
-    pub fn new() -> Self {
+    pub fn new(config: Config) -> Self {
         let session_attribute = SessionAttribute::new();
         let tcp_listener = None;
         let tcp_connection = None;
         let event_queue = EventQueue::new();
         let packet_buffer = [0u8; 1024];
         Self { 
+            config,
             session_attribute,
             tcp_listener,
             tcp_connection,
@@ -78,8 +80,9 @@ impl fsm {
                         self.packet_buffer = [0u8; 1024];
                         self.session_attribute.connect_retry_counter = 0;
                         self.session_attribute.connect_retry_timer = std::time::Duration::from_secs(0);
+                        self.session_attribute.connect_retry_time = SystemTime::now();
                         self.tcp_listener = None;
-                        self.tcp_connection = net::TcpStream::connect("192.168.2.14:179").ok();
+                        self.tcp_connection = net::TcpStream::connect(format!("{}:{}", &self.config.remote_ip_addr, "179")).ok();
                         if self.tcp_connection.is_some() {
                             self.event_queue.push(Event::TcpConnectionConfirmed);
                         } else {
@@ -129,6 +132,11 @@ impl fsm {
                         // - sets the HoldTimer to a large value, and
                         // - changes its state to OpenSent. 
                         // A HoldTimer value of 4 minutes is suggested.
+                        self.session_attribute.connect_retry_timer = std::time::Duration::from_secs(0);
+                        self.session_attribute.connect_retry_time = SystemTime::now();
+                        let open_message = ();
+                        self.session_attribute.hold_timer = time::Duration::from_secs(4 * 60);
+                        self.session_attribute.hold_time = SystemTime::now();
                         self.session_attribute.state = State::OpenSent;
                     },
                     &Event::TcpConnectionFails => {
