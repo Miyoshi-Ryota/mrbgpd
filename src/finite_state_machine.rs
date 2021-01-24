@@ -1,7 +1,7 @@
 use std::{time::{Duration, SystemTime}};
 use std::net;
 
-use net::TcpListener;
+use net::{TcpListener, TcpStream};
 
 pub struct SessionAttribute {
     state: State,
@@ -77,8 +77,8 @@ impl fsm {
                         self.packet_buffer = [0u8; 1024];
                         self.session_attribute.connect_retry_counter = 0;
                         self.session_attribute.connect_retry_timer = std::time::Duration::from_secs(0);
-                        self.tcp_listener = Some(TcpListener::bind("0.0.0.0:179").expect("port 179が使用できません。"));
-                        self.tcp_connection = Some(self.tcp_listener.as_ref().unwrap().accept().unwrap().0);
+                        self.tcp_listener = None;
+                        self.tcp_connection = net::TcpStream::connect("192.168.2.14").ok();
                         self.session_attribute.state = State::Connect;
                     },
                     _ => (),
