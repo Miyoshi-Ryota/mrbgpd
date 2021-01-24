@@ -176,6 +176,7 @@ impl fsm {
                 }
             },
             &State::Active => (),
+            &State::OpenSent => (),
             &State::OpenConfirm => (),
             &State::Established => (),
         };
@@ -230,5 +231,6 @@ pub enum State {
     Connect,
     Active,
     OpenConfirm,
+    OpenSent,
     Established,
 }
