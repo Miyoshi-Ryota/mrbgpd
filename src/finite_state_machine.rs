@@ -1,5 +1,6 @@
 use std::{time::{Duration, SystemTime}};
 use std::net;
+use std::{thread, time};
 
 use net::{TcpListener, TcpStream};
 
@@ -79,6 +80,11 @@ impl fsm {
                         self.session_attribute.connect_retry_timer = std::time::Duration::from_secs(0);
                         self.tcp_listener = None;
                         self.tcp_connection = net::TcpStream::connect("192.168.2.14:179").ok();
+                        if self.tcp_connection.is_some() {
+                            self.event_queue.push(Event::TcpConnectionConfirmed);
+                        } else {
+                            self.event_queue.push(Event::TcpConnectionFails);
+                        }
                         self.session_attribute.state = State::Connect;
                     },
                     _ => (),
@@ -123,6 +129,7 @@ impl fsm {
                         // - sets the HoldTimer to a large value, and
                         // - changes its state to OpenSent. 
                         // A HoldTimer value of 4 minutes is suggested.
+                        self.session_attribute.state = State::OpenSent;
                     },
                     &Event::TcpConnectionFails => {
                         // If the TCP connection fails (Event 18), the local system checks
@@ -132,6 +139,9 @@ impl fsm {
                         // - drops the TCP connection,
                         // - releases all BGP resources, and
                         // - changes its state to Idle.
+                        thread::sleep(time::Duration::from_secs(1));
+                        self.session_attribute.state = State::Idle;
+                        self.event_queue.push(Event::ManualStart);
                     },
                     &Event::BgpHeaderErr | &Event::BgpOpenMsgErr => {
                         // If BGP message header checking (Event 21) or OPEN message checking 
