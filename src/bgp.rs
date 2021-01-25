@@ -26,7 +26,7 @@ struct BgpMessageHeader {
 impl BgpMessageHeader {
     fn decode_to_u8(&self) -> Vec<u8> {
         let mut raw_data = vec![0u8; 19];
-        for i in 0..15 {
+        for i in 0..16 {
             raw_data[i] = 1;
         }
         let bytes = self.length.to_be_bytes();
