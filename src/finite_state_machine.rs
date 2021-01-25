@@ -1,8 +1,9 @@
-use crate::Config;
+use crate::{Config, bgp::BgpOpenMessage};
 use std::{time::{Duration, SystemTime}};
 use std::net;
 use std::{thread, time};
 use net::{TcpListener, TcpStream};
+use std::io::Write;
 
 pub struct SessionAttribute {
     state: State,
@@ -134,7 +135,12 @@ impl fsm {
                         // A HoldTimer value of 4 minutes is suggested.
                         self.session_attribute.connect_retry_timer = std::time::Duration::from_secs(0);
                         self.session_attribute.connect_retry_time = SystemTime::now();
-                        let open_message = ();
+                        let open_message = BgpOpenMessage::new(
+                            self.config.as_number,
+                            self.config.my_ip_addr,
+                        );
+                        let open_message = open_message.decode();
+                        self.tcp_connection.as_ref().unwrap().write(&open_message[..]);
                         self.session_attribute.hold_timer = time::Duration::from_secs(4 * 60);
                         self.session_attribute.hold_time = SystemTime::now();
                         self.session_attribute.state = State::OpenSent;
