@@ -4,7 +4,6 @@ use std::net;
 use std::{thread, time};
 use net::{TcpListener, TcpStream};
 use std::io::Write;
-
 pub struct SessionAttribute {
     state: State,
     connect_retry_counter: usize,
@@ -140,7 +139,7 @@ impl fsm {
                             self.config.my_ip_addr,
                         );
                         let open_message = open_message.decode();
-                        self.tcp_connection.as_ref().unwrap().write(&open_message[..]);
+                        self.tcp_connection.as_ref().unwrap().write(&open_message[..]).expect("cannot send open message");
                         self.session_attribute.hold_timer = time::Duration::from_secs(4 * 60);
                         self.session_attribute.hold_time = SystemTime::now();
                         self.session_attribute.state = State::OpenSent;
@@ -200,7 +199,99 @@ impl fsm {
                 }
             },
             &State::Active => (),
-            &State::OpenSent => (),
+            &State::OpenSent => {
+                match event {
+                    &Event::ManualStop => {
+                        // - sends the NOTIFICATION with a Cease,
+                        // - sets the ConnectRetryTimer to zero,
+                        // - releases all BGP resources,
+                        // - drops the TCP connection,
+                        // - sets the ConnectRetryCounter to zero, and
+                        // - changes its state to Idle.
+                    },
+                    &Event::HoldTimerExpires => {
+                        // - sends a NOTIFICATION message with the error code Hold Timer
+                        //   Expired,
+                        // - sets the ConnectRetryTimer to zero,
+                        // - releases all BGP resources,
+                        // - drops the TCP connection,
+                        // - increments the ConnectRetryCounter,
+                        // - (optionally) performs peer oscillation damping if the
+                        //   DampPeerOscillations attribute is set to TRUE, and
+                        // - changes its state to Idle.
+                    },
+                    &Event::TcpCrAcked | &Event::TcpConnectionConfirmed => {
+                        // If a TcpConnection_Valid (Event 14), Tcp_CR_Acked (Event 16), or a
+                        // TcpConnectionConfirmed event (Event 17) is received, a second TCP
+                        // connection may be in progress.  This second TCP connection is
+                        // tracked per Connection Collision processing (Section 6.8) until an
+                        // OPEN message is received.
+                    },
+                    &Event::TcpConnectionFails => {
+                        // If a TcpConnectionFails event (Event 18) is received, the local
+                        // system:
+                        // - closes the BGP connection,
+                        // - restarts the ConnectRetryTimer,
+                        // - continues to listen for a connection that may be initiated by
+                        //   the remote BGP peer, and
+                        // - changes its state to Active.
+                    },
+                    &Event::BgpOpen => {
+                        // When an OPEN message is received, all fields are checked for
+                        // correctness.  If there are no errors in the OPEN message (Event
+                        // 19), the local system:
+                        //   - resets the DelayOpenTimer to zero,
+                        //   - sets the BGP ConnectRetryTimer to zero,
+                        //   - sends a KEEPALIVE message, and
+                        //   - sets a KeepaliveTimer (via the text below)
+                        //   - sets the HoldTimer according to the negotiated value (see
+                        //     Section 4.2),
+                        //   - changes its state to OpenConfirm.
+                        // If the negotiated hold time value is zero, then the HoldTimer and
+                        // KeepaliveTimer are not started.  If the value of the Autonomous
+                        // System field is the same as the local Autonomous System number,
+                        // then the connection is an "internal" connection; otherwise, it is
+                        // an "external" connection.  (This will impact UPDATE processing as
+                        // described below.)
+                        // Collision detection mechanisms (Section 6.8) need to be applied
+                        // when a valid BGP OPEN message is received (Event 19 or Event 20).
+                        // Please refer to Section 6.8 for the details of the comparison.
+                    }
+                    &Event::BgpHeaderErr | &Event::BgpOpenMsgErr => {
+                        // - sends a NOTIFICATION message with the appropriate error code,
+                        // - sets the ConnectRetryTimer to zero,
+                        // - releases all BGP resources,
+                        // - drops the TCP connection,
+                        // - increments the ConnectRetryCounter by 1,
+                        // - (optionally) performs peer oscillation damping if the
+                        //   DampPeerOscillations attribute is TRUE, and
+                        // - changes its state to Idle.
+                    },
+                    &Event::NotifMsgVerErr => {
+                        // If a NOTIFICATION message is received with a version error
+                        // (Event24), the local system:
+                        // - sets the ConnectRetryTimer to zero,
+                        // - releases all BGP resources,
+                        // - drops the TCP connection, and
+                        // - changes its state to Idle.
+                    },
+                    &Event::ConnectRetryTimerExpires | &Event::KeepaliveTimerExpires | &Event::NotifMsg | &Event::KeepAliveMsg | &Event::UpdateMsg | &Event::UpdateMsgErr => {
+                        // In response to any other event (Events 9, 11-13, 20, 25-28), the
+                        // local system:
+                        //   - sends the NOTIFICATION with the Error Code Finite State
+                        //     Machine Error,
+                        //   - sets the ConnectRetryTimer to zero,
+                        //   - releases all BGP resources,
+                        //   - drops the TCP connection,
+                        //   - increments the ConnectRetryCounter by 1,
+                        //   - (optionally) performs peer oscillation damping if the DampPeerOscillations attribute is set to TRUE, and
+                        //   - changes its state to Idle.
+                    },
+                    _ => {
+                        //
+                    }
+                }
+            },
             &State::OpenConfirm => (),
             &State::Established => (),
         };
@@ -248,7 +339,6 @@ pub enum Event {
     UpdateMsg, // Event 27
     UpdateMsgErr, // Event 28
 }
-
 #[derive(Debug)]
 pub enum State {
     Idle,
