@@ -1,4 +1,4 @@
-use crate::{Config, bgp::BgpOpenMessage};
+use crate::{Config, Mode, bgp::BgpOpenMessage};
 use std::{time::{Duration, SystemTime}};
 use std::net;
 use std::{thread, time};
@@ -18,7 +18,7 @@ pub struct SessionAttribute {
 pub struct fsm {
     config: Config,
     session_attribute: SessionAttribute,
-    tcp_listener: Option<net::TcpListener>,
+    tcp_listener: net::TcpListener,
     tcp_connection: Option<net::TcpStream>,
     packet_buffer: [u8; 1024],
     pub event_queue: EventQueue,
@@ -45,9 +45,9 @@ impl EventQueue {
 }
 
 impl fsm {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config, tcp_listener: TcpListener) -> Self {
         let session_attribute = SessionAttribute::new();
-        let tcp_listener = None;
+        let tcp_listener = tcp_listener;
         let tcp_connection = None;
         let event_queue = EventQueue::new();
         let packet_buffer = [0u8; 1024];
@@ -81,8 +81,12 @@ impl fsm {
                         self.session_attribute.connect_retry_counter = 0;
                         self.session_attribute.connect_retry_timer = std::time::Duration::from_secs(0);
                         self.session_attribute.connect_retry_time = SystemTime::now();
-                        self.tcp_listener = None;
-                        self.tcp_connection = net::TcpStream::connect(format!("{}:{}", &self.config.remote_ip_addr, "179")).ok();
+                        self.tcp_connection = match &self.config.mode {
+                            &Mode::Active =>
+                                net::TcpStream::connect(format!("{}:{}", &self.config.remote_ip_addr, "179")).ok(),
+                            &Mode::Passive =>
+                                Some(self.tcp_listener.accept().unwrap().0),
+                        };
                         if self.tcp_connection.is_some() {
                             self.event_queue.push(Event::TcpConnectionConfirmed);
                         } else {
