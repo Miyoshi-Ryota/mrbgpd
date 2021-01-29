@@ -1,6 +1,7 @@
 use mrbgpd::finite_state_machine::{fsm, Event};
 use mrbgpd::Config;
-use std::net::{TcpListener, TcpStream};
+use std::{net::{TcpListener, TcpStream}};
+use std::{thread, time};
 use std::io::Read;
 use std::env;
 
@@ -31,5 +32,6 @@ fn main() {
                     println!("Connection Error")
                 }
             }
+            thread::sleep(time::Duration::from_secs(1));
         }
 }
