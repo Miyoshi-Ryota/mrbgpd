@@ -7,10 +7,8 @@ use std::env;
 
 // * mai loop goto ni fsm.tcp_stream kara read suru.
 
-fn handle_packets(s: &mut TcpStream) {
-    let mut buf = [0u8; 1024];
-    s.read(&mut buf);
-    println!("{:?}", buf[0]);
+fn handle_packets(buf: Vec<u8>) {
+    println!("{:?}", buf);
 }
 fn main() {
     let args: Vec<String> = env::args().collect();
