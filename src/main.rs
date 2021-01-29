@@ -1,6 +1,6 @@
 use mrbgpd::finite_state_machine::{fsm, Event};
 use mrbgpd::Config;
-use std::{net::{TcpListener, TcpStream}};
+use std::{io, net::{TcpListener, TcpStream}};
 use std::{thread, time};
 use std::io::Read;
 use std::env;
@@ -9,6 +9,10 @@ use std::env;
 
 fn handle_packets(buf: Vec<u8>) {
     println!("{:?}", buf);
+}
+
+fn wait_for_fd() {
+    thread::sleep(time::Duration::from_secs(1));
 }
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -27,7 +31,13 @@ fn main() {
         let mut buf = vec![];
         match fsm.tcp_connection.as_ref().unwrap().read_to_end(&mut buf) {
             Ok(_) => handle_packets(buf),
-            Err(e) => println!("error: {}, no packets...: {:?}", e, buf),
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                // wait until network socket is ready, typically implemented
+                // via platform-specific APIs such as epoll or IOCP
+                wait_for_fd();
+                println!("error: {}, no_packets...: {:?}", e, buf);
+            }    
+            Err(e) => println!("other error happen: {:?}, : {:?}", e, buf),
         }
         thread::sleep(time::Duration::from_secs(1));
     }
