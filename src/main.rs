@@ -14,6 +14,7 @@ fn main() {
     let config = Config::parse_args(args);
     println!("{:?}", &config);
     let tcp_listener = TcpListener::bind("0.0.0.0:179").expect("port 179が使用できません。");
+    tcp_listener.set_nonblocking(true).unwrap();
     let mut fsm = fsm::new(config);
     fsm.event_queue.push(Event::ManualStart);
         for stream in tcp_listener.incoming() {
