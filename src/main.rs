@@ -27,7 +27,7 @@ fn main() {
         let mut buf = vec![];
         match fsm.tcp_connection.as_ref().unwrap().read_to_end(&mut buf) {
             Ok(_) => handle_packets(buf),
-            Err(_) => println!("no packets...: {:?}", buf),
+            Err(e) => println!("error: {}, no packets...: {:?}", e, buf),
         }
         thread::sleep(time::Duration::from_secs(1));
     }
