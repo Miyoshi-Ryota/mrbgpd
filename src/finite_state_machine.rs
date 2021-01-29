@@ -19,7 +19,7 @@ pub struct fsm {
     config: Config,
     session_attribute: SessionAttribute,
     tcp_listener: net::TcpListener,
-    tcp_connection: Option<net::TcpStream>,
+    pub tcp_connection: Option<net::TcpStream>,
     packet_buffer: [u8; 1024],
     pub event_queue: EventQueue,
 }
@@ -92,6 +92,7 @@ impl fsm {
                         } else {
                             self.event_queue.push(Event::TcpConnectionFails);
                         }
+                        self.tcp_connection.as_ref().unwrap().set_nonblocking(true).unwrap();
                         self.session_attribute.state = State::Connect;
                     },
                     _ => (),

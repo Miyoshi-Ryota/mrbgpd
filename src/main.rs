@@ -7,7 +7,7 @@ use std::env;
 
 // * mai loop goto ni fsm.tcp_stream kara read suru.
 
-fn handle_connection(s: &mut TcpStream) {
+fn handle_packets(s: &mut TcpStream) {
     let mut buf = [0u8; 1024];
     s.read(&mut buf);
     println!("{:?}", buf[0]);
@@ -25,7 +25,12 @@ fn main() {
         match fsm.event_queue.pop() {
             Some(event) => fsm.handle_event(&event),
             None => (),
-        }    
+        }
+        let mut buf = vec![];
+        match fsm.tcp_connection.as_ref().unwrap().read_to_end(&mut buf) {
+            Ok(_) => handle_packets(buf),
+            Err(_) => (),
+        }
         thread::sleep(time::Duration::from_secs(1));
     }
 }
