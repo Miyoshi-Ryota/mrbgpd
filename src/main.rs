@@ -20,20 +20,12 @@ fn main() {
     // tcp_listener.set_nonblocking(true).unwrap();
     let mut fsm = fsm::new(config, tcp_listener.try_clone().unwrap());
     fsm.event_queue.push(Event::ManualStart);
-        for stream in tcp_listener.incoming() {
-            println!("{:?}", fsm.get_state());
-            match fsm.event_queue.pop() {
-                Some(event) => fsm.handle_event(&event),
-                None => (),
-            }    
-            match stream {
-                Ok(mut s) => {
-                    handle_connection(&mut s);
-                }
-                Err(e) => {
-                    println!("Connection Error")
-                }
-            }
-            thread::sleep(time::Duration::from_secs(1));
-        }
+    loop {
+        println!("{:?}", fsm.get_state());
+        match fsm.event_queue.pop() {
+            Some(event) => fsm.handle_event(&event),
+            None => (),
+        }    
+        thread::sleep(time::Duration::from_secs(1));
+    }
 }
