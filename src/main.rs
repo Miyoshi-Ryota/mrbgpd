@@ -29,16 +29,25 @@ fn main() {
             None => (),
         }
         let mut buf = vec![];
-        match fsm.tcp_connection.as_ref().unwrap().read_to_end(&mut buf) {
-            Ok(_) => handle_packets(buf),
-            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                // wait until network socket is ready, typically implemented
-                // via platform-specific APIs such as epoll or IOCP
-                wait_for_fd();
-                println!("error: {}, no_packets...: {:?}", e, buf);
-            }    
-            Err(e) => println!("other error happen: {:?}, : {:?}", e, buf),
+        let result= fsm.tcp_connection.as_ref().unwrap().read_to_end(&mut buf);
+        match result {
+            Ok(_) => println!("Ok!"),
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => println!("error: {}", e),
+            Err(e) => println!("error: {}", e),
         }
+        if buf.len() > 0 {
+            println!("Buff: {:?}", buf);
+        }
+        // match fsm.tcp_connection.as_ref().unwrap().read_to_end(&mut buf) {
+        //     Ok(_) => handle_packets(buf),
+        //     Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+        //         // wait until network socket is ready, typically implemented
+        //         // via platform-specific APIs such as epoll or IOCP
+        //         wait_for_fd();
+        //         println!("error: {}, no_packets...: {:?}", e, buf);
+        //     }    
+        //     Err(e) => println!("other error happen: {:?}, : {:?}", e, buf),
+        // }
         thread::sleep(time::Duration::from_secs(1));
     }
 }
