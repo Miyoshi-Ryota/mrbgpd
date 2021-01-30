@@ -29,12 +29,7 @@ fn main() {
             None => (),
         }
         let mut buf = vec![];
-        let result= fsm.tcp_connection.as_ref().unwrap().read_to_end(&mut buf);
-        match result {
-            Ok(_) => println!("Ok!"),
-            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => println!("error: {}", e),
-            Err(e) => println!("error: {}", e),
-        }
+        fsm.tcp_connection.as_ref().unwrap().read_to_end(&mut buf);
         if buf.len() > 0 {
             println!("Buff: {:?}", buf);
         }
