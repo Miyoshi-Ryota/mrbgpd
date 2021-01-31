@@ -1,4 +1,6 @@
-use std::{convert::TryInto, fmt, io::Read, net::{Ipv4Addr, TcpStream}};
+use std::{convert::TryInto, fmt, io::Read, net::{Ipv4Addr, TcpStream}, option};
+
+use crate::finite_state_machine::{Event, EventQueue};
 
 enum BGPVersion{
     V1,
@@ -16,7 +18,26 @@ impl BGPVersion {
             &BGPVersion::V4 => 4,
         }
     }
+
+    fn encode_from_u8(v: u8) -> Result<Self, CannotEncodeU8AsBGPVersion> {
+        match v {
+            1 => Ok(BGPVersion::V1),
+            2 => Ok(BGPVersion::V2),
+            3 => Ok(BGPVersion::V3),
+            4 => Ok(BGPVersion::V4),
+            _ => Err(CannotEncodeU8AsBGPVersion),
+        }
+    }
 }
+
+#[derive(Debug)]
+struct CannotEncodeU8AsBGPVersion;
+impl fmt::Display for CannotEncodeU8AsBGPVersion {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "cannot encode u8 as bgp version")
+    }
+}
+
 
 struct BgpMessageHeader {
     length: u16,
@@ -39,6 +60,12 @@ impl BgpMessageHeader {
             BgpMessageType::Keepalive => 4,
         };
         raw_data
+    }
+
+    fn encode_from_u8(raw_data: &Vec<u8>) -> Self {
+        let length = u16::from_be_bytes(raw_data[16..18].try_into().unwrap());
+        let type_ = identify_what_kind_of_bgp_packet_is(raw_data).unwrap();
+        Self { length, type_ }
     }
 }
 
@@ -75,6 +102,33 @@ impl BgpOpenMessage {
         let optional_parameters = vec![];
 
         BgpOpenMessage {
+            header,
+            version,
+            my_autonomous_system,
+            hold_time,
+            bgp_identifier,
+            optional_parameter_length,
+            optional_parameters,
+        }
+    }
+    pub fn encode(raw_data: &Vec<u8>) -> Self {
+        let header = BgpMessageHeader::encode_from_u8(&raw_data);
+        let version = BGPVersion::encode_from_u8(raw_data[16]).unwrap();
+        let my_autonomous_system = AutonomousSystemNumber(
+            u16::from_be_bytes(raw_data[17..19].try_into().unwrap()));
+        let hold_time = HoldTime(
+            u16::from_be_bytes(raw_data[19..21].try_into().unwrap()));
+        let bgp_identifier = Ipv4Addr::new(raw_data[21], raw_data[22], raw_data[23], raw_data[24]);
+        let optional_parameter_length = raw_data[25];
+        
+        // ToDo: optional parameter ni taiou suru
+        let optional_parameters = if optional_parameter_length != 0 {
+            panic!()
+        } else {
+            vec![]
+        };
+        
+        Self {
             header,
             version,
             my_autonomous_system,
@@ -195,14 +249,17 @@ enum BgpMessage {
     Keepalive(BgpKeepaliveMessage),
 }
 
-pub fn bgp_packet_handler(raw_data: &Vec<u8>) {
+pub fn bgp_packet_handler(raw_data: &Vec<u8>, event_queue: &mut EventQueue) {
     let bgp_message_type = identify_what_kind_of_bgp_packet_is(raw_data);
     match bgp_message_type {
         Ok(t) => {
             match t {
                 BgpMessageType::Open => {
-                    println!("Open Message!");
-                    println!("Raw Data: {:?}", raw_data);
+                    // if valid open message
+                    let bgp_message = BgpOpenMessage::encode(raw_data);
+                    event_queue.push(Event::BgpOpen);
+                    // ToDo: else error open message ni taiou
+                    // event_queue.push(Event::BgpOpenMsgErr);
                 },
                 BgpMessageType::Update => (),
                 BgpMessageType::Notification => (),

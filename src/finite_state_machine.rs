@@ -252,6 +252,7 @@ impl fsm {
                         //   - sets the HoldTimer according to the negotiated value (see
                         //     Section 4.2),
                         //   - changes its state to OpenConfirm.
+                        self.session_attribute.state = State::OpenConfirm;
                         // If the negotiated hold time value is zero, then the HoldTimer and
                         // KeepaliveTimer are not started.  If the value of the Autonomous
                         // System field is the same as the local Autonomous System number,

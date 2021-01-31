@@ -65,7 +65,7 @@ fn main() {
              }
         }
         if data_buffer.buf.len() > 0 {
-            bgp_packet_handler(&data_buffer.retrive_one_bgp_message());
+            bgp_packet_handler(&data_buffer.retrive_one_bgp_message(), &mut fsm.event_queue);
         }
         thread::sleep(time::Duration::from_secs(1));
     }
