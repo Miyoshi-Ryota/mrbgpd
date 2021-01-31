@@ -42,6 +42,7 @@ impl BgpMessageHeader {
     }
 }
 
+#[derive(Debug)]
 enum BgpMessageType {
     Open,
     Update,
@@ -196,6 +197,7 @@ enum BgpMessage {
 
 pub fn bgp_packet_handler(raw_data: &Vec<u8>) {
     let bgp_message_type = identify_what_kind_of_bgp_packet_is(raw_data);
+    println!("{:?}", bgp_message_type);
     match bgp_message_type {
         Ok(t) => {
             match t {
@@ -212,6 +214,7 @@ pub fn bgp_packet_handler(raw_data: &Vec<u8>) {
     }
 }
 
+#[derive(Debug)]
 struct CannotIdentifyTheRawDataAsBgpPacketError;
 impl fmt::Display for CannotIdentifyTheRawDataAsBgpPacketError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
