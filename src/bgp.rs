@@ -113,13 +113,13 @@ impl BgpOpenMessage {
     }
     pub fn encode(raw_data: &Vec<u8>) -> Self {
         let header = BgpMessageHeader::encode_from_u8(&raw_data);
-        let version = BGPVersion::encode_from_u8(raw_data[16]).unwrap();
+        let version = BGPVersion::encode_from_u8(raw_data[19]).unwrap();
         let my_autonomous_system = AutonomousSystemNumber(
-            u16::from_be_bytes(raw_data[17..19].try_into().unwrap()));
+            u16::from_be_bytes(raw_data[20..22].try_into().unwrap()));
         let hold_time = HoldTime(
-            u16::from_be_bytes(raw_data[19..21].try_into().unwrap()));
-        let bgp_identifier = Ipv4Addr::new(raw_data[21], raw_data[22], raw_data[23], raw_data[24]);
-        let optional_parameter_length = raw_data[25];
+            u16::from_be_bytes(raw_data[22..24].try_into().unwrap()));
+        let bgp_identifier = Ipv4Addr::new(raw_data[24], raw_data[25], raw_data[26], raw_data[27]);
+        let optional_parameter_length = raw_data[28];
         
         // ToDo: optional parameter ni taiou suru
         let optional_parameters = if optional_parameter_length != 0 {
