@@ -4,12 +4,7 @@ use std::{convert::TryInto, io, net::{TcpListener, TcpStream}};
 use std::{thread, time};
 use std::io::Read;
 use std::env;
-
-// * mai loop goto ni fsm.tcp_stream kara read suru.
-
-fn handle_packets(buf: &Vec<u8>) {
-    println!("{:?}", buf);
-}
+use bgp::bgp_packet_handler;
 
 struct DataBuffer {
     pub buf: Vec<u8>,
@@ -70,7 +65,7 @@ fn main() {
              }
         }
         if data_buffer.buf.len() > 0 {
-            handle_packets(&data_buffer.retrive_one_bgp_message());
+            bgp_packet_handler(&data_buffer.retrive_one_bgp_message());
         }
         thread::sleep(time::Duration::from_secs(1));
     }

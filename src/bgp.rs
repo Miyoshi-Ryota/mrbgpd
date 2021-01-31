@@ -1,4 +1,4 @@
-use std::net::Ipv4Addr;
+use std::{convert::TryInto, fmt, io::Read, net::{Ipv4Addr, TcpStream}};
 
 enum BGPVersion{
     V1,
@@ -192,4 +192,40 @@ enum BgpMessage {
     Update(BgpUpdateMessage),
     Notification(BgpNotificationMessage),
     Keepalive(BgpKeepaliveMessage),
+}
+
+pub fn bgp_packet_handler(raw_data: &Vec<u8>) {
+    let bgp_message_type = identify_what_kind_of_bgp_packet_is(raw_data);
+    match bgp_message_type {
+        Ok(t) => {
+            match t {
+                BgpMessageType::Open => {
+                    println!("Open Message!");
+                    println!("Raw Data: {:?}", raw_data);
+                },
+                BgpMessageType::Update => (),
+                BgpMessageType::Notification => (),
+                BgpMessageType::Keepalive => (),
+            }
+        },
+        Err(_) => (),
+    }
+}
+
+struct CannotIdentifyTheRawDataAsBgpPacketError;
+impl fmt::Display for CannotIdentifyTheRawDataAsBgpPacketError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "cannot identify the raw data as bgp packet")
+    }
+}
+
+
+fn identify_what_kind_of_bgp_packet_is(raw_data: &Vec<u8>) -> Result<BgpMessageType, CannotIdentifyTheRawDataAsBgpPacketError> {
+    match raw_data[16] {
+        1 => Ok(BgpMessageType::Open),
+        2 => Ok(BgpMessageType::Update),
+        3 => Ok(BgpMessageType::Notification),
+        4 => Ok(BgpMessageType::Keepalive),
+        _ => Err(CannotIdentifyTheRawDataAsBgpPacketError),
+    }
 }
