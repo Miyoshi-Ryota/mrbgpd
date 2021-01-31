@@ -32,7 +32,7 @@ impl DataBuffer {
     pub fn retrive_one_bgp_message(&mut self) -> Vec<u8> {
         let raw_bgp_header = self.retrieve_bgp_header_data();
         let bgp_header_length = 19;
-        let next_bgp_message_length: u16 = u16::from_be_bytes(raw_bgp_header[16..17].try_into().unwrap());
+        let next_bgp_message_length: u16 = u16::from_be_bytes(raw_bgp_header[16..18].try_into().unwrap());
         let (raw_bgp_message, buf )= self.buf.split_at((next_bgp_message_length - bgp_header_length) as usize);
         let raw_bgp_message = raw_bgp_message.to_vec();
         self.buf = buf.to_vec();
