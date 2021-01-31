@@ -229,6 +229,6 @@ fn identify_what_kind_of_bgp_packet_is(raw_data: &Vec<u8>) -> Result<BgpMessageT
         2 => Ok(BgpMessageType::Update),
         3 => Ok(BgpMessageType::Notification),
         4 => Ok(BgpMessageType::Keepalive),
-        _ => Err(CannotIdentifyTheRawDataAsBgpPacketError),
+        num => {println!("raw_data[16]: {}", num); Err(CannotIdentifyTheRawDataAsBgpPacketError)},
     }
 }
