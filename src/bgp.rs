@@ -278,7 +278,9 @@ pub fn bgp_packet_handler(raw_data: &Vec<u8>, event_queue: &mut EventQueue) {
                 },
                 BgpMessageType::Update => (),
                 BgpMessageType::Notification => (),
-                BgpMessageType::Keepalive => (),
+                BgpMessageType::Keepalive => {
+                    event_queue.push(Event::KeepAliveMsg);
+                },
             }
         },
         Err(_) => (),
