@@ -67,6 +67,10 @@ impl BgpMessageHeader {
         let type_ = identify_what_kind_of_bgp_packet_is(raw_data).unwrap();
         Self { length, type_ }
     }
+
+    fn new(length: u16, type_: BgpMessageType) -> Self {
+        Self { length, type_ }
+    }
 }
 
 #[derive(Debug)]
@@ -176,8 +180,19 @@ struct IpPrefix;
 
 struct PathAttribute;
 
-struct BgpKeepaliveMessage {
+pub struct BgpKeepaliveMessage {
     header: BgpMessageHeader,
+}
+
+impl BgpKeepaliveMessage {
+    pub fn new() -> Self {
+        let header = BgpMessageHeader::new(19, BgpMessageType::Keepalive);
+        Self { header }
+    }
+
+    pub fn decode_to_u8(&self) -> Vec<u8> {
+        self.header.decode_to_u8()
+    }
 }
 
 struct BgpNotificationMessage{

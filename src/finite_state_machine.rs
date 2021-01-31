@@ -1,5 +1,5 @@
-use crate::{Config, Mode, bgp::BgpOpenMessage};
-use std::{time::{Duration, SystemTime}};
+use crate::{Config, Mode, bgp::BgpOpenMessage, bgp::BgpKeepaliveMessage};
+use std::{alloc::System, time::{Duration, SystemTime}};
 use std::net;
 use std::{thread, time};
 use net::{TcpListener, TcpStream};
@@ -252,6 +252,19 @@ impl fsm {
                         //   - sets the HoldTimer according to the negotiated value (see
                         //     Section 4.2),
                         //   - changes its state to OpenConfirm.
+                        self.session_attribute.connect_retry_timer = time::Duration::from_secs(0);
+                        self.session_attribute.connect_retry_time = SystemTime::now();
+                        let keepalive_message = BgpKeepaliveMessage::new();
+                        let raw_data = keepalive_message.decode_to_u8();
+                        self.tcp_connection.as_ref().unwrap().write(&raw_data[..]).unwrap();
+
+                        // ToDo; KeepaliveTimer no tukaikata matigatteru kamo
+                        self.session_attribute.keepalive_timer = time::Duration::from_secs(0);
+                        self.session_attribute.keepalive_time = SystemTime::now();
+
+                        // ToDo: holdtimer no nego wo yaru
+                        //       bgp open ga fsm kara mieru you ni suru
+
                         self.session_attribute.state = State::OpenConfirm;
                         // If the negotiated hold time value is zero, then the HoldTimer and
                         // KeepaliveTimer are not started.  If the value of the Autonomous
