@@ -311,7 +311,18 @@ impl fsm {
                     }
                 }
             },
-            &State::OpenConfirm => (),
+            &State::OpenConfirm => {
+                match event {
+                    &Event::KeepAliveMsg => {
+                        // If the local system receives a KEEPALIVE message (KeepAliveMsg
+                        //    (Event 26)), the local system:
+                        //      - restarts the HoldTimer and
+                        //      - changes its state to Established.
+                        self.session_attribute.state = State::Established;
+                    },
+                    _ => ()
+                }
+            },
             &State::Established => (),
         };
     }
