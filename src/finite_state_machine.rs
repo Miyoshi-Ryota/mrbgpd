@@ -7,12 +7,12 @@ use std::io::Write;
 pub struct SessionAttribute {
     state: State,
     connect_retry_counter: usize,
-    connect_retry_timer: Duration,
-    connect_retry_time: SystemTime,
-    hold_timer: Duration,
-    hold_time: SystemTime,
-    keepalive_timer: Duration,
-    keepalive_time: SystemTime,
+    connect_retry_timer: SystemTime,
+    connect_retry_time: Duration,
+    hold_timer: SystemTime,
+    hold_time: Duration,
+    keepalive_timer: SystemTime,
+    keepalive_time: Duration,
 }
 
 pub struct fsm {
@@ -79,8 +79,8 @@ impl fsm {
                         // - changes its state to Connect.
                         self.packet_buffer = [0u8; 1024];
                         self.session_attribute.connect_retry_counter = 0;
-                        self.session_attribute.connect_retry_timer = std::time::Duration::from_secs(0);
-                        self.session_attribute.connect_retry_time = SystemTime::now();
+                        self.session_attribute.connect_retry_timer = SystemTime::now();
+                        self.session_attribute.connect_retry_time = std::time::Duration::from_secs(120);
                         self.tcp_connection = match &self.config.mode {
                             &Mode::Active =>
                                 net::TcpStream::connect(format!("{}:{}", &self.config.remote_ip_addr, "179")).ok(),
@@ -110,7 +110,7 @@ impl fsm {
                         self.session_attribute.connect_retry_counter = 0;
                         // - stops the ConnectRetryTimer and sets ConnectRetryTimer to
                         //   zero, and
-                        self.session_attribute.connect_retry_timer = Duration::from_secs(0);
+                        self.session_attribute.connect_retry_timer = SystemTime::now();
                         // - changes its state to Idle.
                         self.session_attribute.state = State::Idle;
                     },
@@ -137,16 +137,15 @@ impl fsm {
                         // - sets the HoldTimer to a large value, and
                         // - changes its state to OpenSent. 
                         // A HoldTimer value of 4 minutes is suggested.
-                        self.session_attribute.connect_retry_timer = std::time::Duration::from_secs(0);
-                        self.session_attribute.connect_retry_time = SystemTime::now();
+                        self.session_attribute.connect_retry_timer = SystemTime::now();
                         let open_message = BgpOpenMessage::new(
                             self.config.as_number,
                             self.config.my_ip_addr,
                         );
                         let open_message = open_message.decode();
                         self.tcp_connection.as_ref().unwrap().write(&open_message[..]).expect("cannot send open message");
-                        self.session_attribute.hold_timer = time::Duration::from_secs(4 * 60);
-                        self.session_attribute.hold_time = SystemTime::now();
+                        self.session_attribute.hold_time = time::Duration::from_secs(4 * 60);
+                        self.session_attribute.hold_timer = SystemTime::now();
                         self.session_attribute.state = State::OpenSent;
                     },
                     &Event::TcpConnectionFails => {
@@ -252,18 +251,17 @@ impl fsm {
                         //   - sets the HoldTimer according to the negotiated value (see
                         //     Section 4.2),
                         //   - changes its state to OpenConfirm.
-                        self.session_attribute.connect_retry_timer = time::Duration::from_secs(0);
-                        self.session_attribute.connect_retry_time = SystemTime::now();
+                        self.session_attribute.connect_retry_timer = SystemTime::now();
                         let keepalive_message = BgpKeepaliveMessage::new();
                         let raw_data = keepalive_message.decode_to_u8();
                         self.tcp_connection.as_ref().unwrap().write(&raw_data[..]).unwrap();
 
-                        // ToDo; KeepaliveTimer no tukaikata matigatteru kamo
-                        self.session_attribute.keepalive_timer = time::Duration::from_secs(0);
-                        self.session_attribute.keepalive_time = SystemTime::now();
+                        self.session_attribute.hold_timer = SystemTime::now();
+                        // ToDo: Nego wo RFC doori ni yaru (mijikai hou wo saiyou suru)
+                        self.session_attribute.hold_time = time::Duration::from_secs(90);
 
-                        // ToDo: holdtimer no nego wo yaru
-                        //       bgp open ga fsm kara mieru you ni suru
+                        self.session_attribute.keepalive_timer = SystemTime::now();
+                        self.session_attribute.keepalive_time = self.session_attribute.hold_time / 3;
 
                         self.session_attribute.state = State::OpenConfirm;
                         // If the negotiated hold time value is zero, then the HoldTimer and
@@ -333,12 +331,12 @@ impl SessionAttribute {
         SessionAttribute {
             state: State::Idle,
             connect_retry_counter: 0,
-            connect_retry_timer: Duration::new(0, 0),
-            connect_retry_time: SystemTime::now(),
-            hold_timer: Duration::new(0, 0),
-            hold_time: SystemTime::now(),
-            keepalive_timer: Duration::new(0, 0),
-            keepalive_time: SystemTime::now(),
+            connect_retry_timer: SystemTime::now(),
+            connect_retry_time: Duration::from_secs(120),
+            hold_timer: SystemTime::now(),
+            hold_time: Duration::from_secs(90),
+            keepalive_timer: SystemTime::now(),
+            keepalive_time: Duration::from_secs(30),
         }
     }
 
