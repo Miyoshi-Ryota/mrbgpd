@@ -316,6 +316,7 @@ impl fsm {
                         //    (Event 26)), the local system:
                         //      - restarts the HoldTimer and
                         //      - changes its state to Established.
+                        self.session_attribute.hold_timer = SystemTime::now();
                         self.session_attribute.state = State::Established;
                     },
                     _ => ()
