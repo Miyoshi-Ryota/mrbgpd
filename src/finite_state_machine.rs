@@ -311,6 +311,93 @@ impl fsm {
             },
             &State::OpenConfirm => {
                 match event {
+                    &Event::ManualStart => {
+                        // Any start event (Events 1, 3-7) is ignored in the OpenConfirm state.
+                    },
+                    &Event::ManualStop => {
+                        // In response to a ManualStop event (Event 2) initiated by the
+                        // operator, the local system:
+                        //   - sends the NOTIFICATION message with a Cease,
+                        //   - releases all BGP resources,
+                        //   - drops the TCP connection,
+                        //   - sets the ConnectRetryCounter to zero,
+                        //   - sets the ConnectRetryTimer to zero, and
+                        //   - changes its state to Idle.
+                    },
+                    &Event::HoldTimerExpires => {
+                        //   If the HoldTimer_Expires event (Event 10) occurs before a
+                        //   KEEPALIVE message is received, the local system:
+                        //   - sends the NOTIFICATION message with the Error Code Hold Timer
+                        //   Expired,
+                        // - sets the ConnectRetryTimer to zero,
+                        // - releases all BGP resources,
+                        // - drops the TCP connection,
+                        // - increments the ConnectRetryCounter by 1,
+                        // - (optionally) performs peer oscillation damping if the
+                        //   DampPeerOscillations attribute is set to TRUE, and
+                        // - changes its state to Idle.                  
+                    },
+                    &Event::KeepaliveTimerExpires => {
+                        // If the local system receives a KeepaliveTimer_Expires event (Event
+                        //     11), the local system:
+                        //       - sends a KEEPALIVE message,
+                        //       - restarts the KeepaliveTimer, and
+                        //       - remains in the OpenConfirmed state.
+                    },
+                    &Event::TcpConnectionConfirmed | &Event::TcpCrAcked => {
+                        // In the event of a TcpConnection_Valid event (Event 14), or the
+                        // success of a TCP connection (Event 16 or Event 17) while in
+                        // OpenConfirm, the local system needs to track the second
+                        // connection.
+                    },
+                    &Event::TcpConnectionFails | &Event::NotifMsg => {
+                        // If the local system receives a TcpConnectionFails event (Event 18)
+                        // from the underlying TCP or a NOTIFICATION message (Event 25), the
+                        // local system:
+                        //   - sets the ConnectRetryTimer to zero,
+                        //   - releases all BGP resources,
+                        //   - drops the TCP connection,
+                        //   - increments the ConnectRetryCounter by 1,
+                        //   - (optionally) performs peer oscillation damping if the
+                        //     DampPeerOscillations attribute is set to TRUE, and
+                        //   - changes its state to Idle.
+                    },
+                    &Event::NotifMsgVerErr => {
+                        // If the local system receives a NOTIFICATION message with a version
+                        // error (NotifMsgVerErr (Event 24)), the local system:
+                        //   - sets the ConnectRetryTimer to zero,
+                        //   - releases all BGP resources,
+                        //   - drops the TCP connection, and
+                        //   - changes its state to Idle.                  
+                    },
+                    &Event::BgpOpen => {
+                        // If the local system receives a valid OPEN message (BGPOpen (Event
+                        //     19)), the collision detect function is processed per Section 6.8.
+                        //     If this connection is to be dropped due to connection collision,
+                        //     the local system:
+                        //       - sends a NOTIFICATION with a Cease,
+                        //       - sets the ConnectRetryTimer to zero,
+                        //       - releases all BGP resources,
+                        //       - drops the TCP connection (send TCP FIN),
+                        //       - increments the ConnectRetryCounter by 1,
+                        //       - (optionally) performs peer oscillation damping if the
+                        //         DampPeerOscillations attribute is set to TRUE, and
+                        //       - changes its state to Idle.
+                    },
+                    &Event::BgpHeaderErr | &Event::BgpOpenMsgErr => {
+                        // If an OPEN message is received, all fields are checked for
+                        // correctness.  If the BGP message header checking (BGPHeaderErr
+                        // (Event 21)) or OPEN message checking detects an error (see Section
+                        // 6.2) (BGPOpenMsgErr (Event 22)), the local system:
+                        //   - sends a NOTIFICATION message with the appropriate error code,
+                        //   - sets the ConnectRetryTimer to zero,
+                        //   - releases all BGP resources,
+                        //   - drops the TCP connection,
+                        //   - increments the ConnectRetryCounter by 1,
+                        //   - (optionally) performs peer oscillation damping if the
+                        //     DampPeerOscillations attribute is set to TRUE, and
+                        //   - changes its state to Idle.
+                    },
                     &Event::KeepAliveMsg => {
                         // If the local system receives a KEEPALIVE message (KeepAliveMsg
                         //    (Event 26)), the local system:
@@ -319,7 +406,16 @@ impl fsm {
                         self.session_attribute.hold_timer = SystemTime::now();
                         self.session_attribute.state = State::Established;
                     },
-                    _ => ()
+                    _ => {
+                        // In response to any other event (Events 9, 12-13, 20, 27-28), the
+                        // local system:
+                        //   - sends a NOTIFICATION with a code of Finite State Machine
+                        //     Error,
+                        //   - sets the ConnectRetryTimer to zero,
+                        //   - releases all BGP resources
+                        //   - drops the TCP connection,
+                        //   - increments the ConnectRetryCounter by 1,                  
+                    },
                 }
             },
             &State::Established => (),
