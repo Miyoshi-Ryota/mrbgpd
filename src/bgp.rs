@@ -1,4 +1,4 @@
-use std::{convert::TryInto, fmt, io::Read, net::{Ipv4Addr, TcpStream}, option};
+use std::{convert::TryInto, fmt, io::Read, net::{Ipv4Addr, TcpStream}, option, str::FromStr};
 
 use crate::finite_state_machine::{Event, EventQueue};
 
@@ -176,7 +176,42 @@ struct BgpUpdateMessage {
     path_attributes: Vec<PathAttribute>,
 }
 
-struct IpPrefix;
+#[derive(Debug, Clone, Copy)]
+struct IpPrefix {
+    network_address: Ipv4Addr, // ToDo: 正確にはネットワークアドレス的なやつなのでipv4addrを使うのは不適切
+    prefix_length: u8,
+}
+
+struct RoutingInformationEntry {
+    prefix: IpPrefix,
+    destination_address: Ipv4Addr,
+    output_interface: Interface
+}
+
+struct LocRib(Vec<RoutingInformationEntry>);
+struct AdjRibsOut(Vec<RoutingInformationEntry>);
+struct Interface;
+
+fn disseminate_routes() -> AdjRibsOut {
+    AdjRibsOut(vec![])
+    // Phase 3
+}
+
+fn put_route_of_network_config_on_loc_lib(loc_lib: &mut LocRib, network: IpPrefix) -> () {
+    // 最初の送信するルートはhttps://www.infraexpert.com/study/bgpz06.htmlによると
+    // networkコマンドで送ったりするっぽいな、fsmのコンフィグをいじるようにしよう
+    // loc_libはグローバルかな
+    let (destination_address, output_interface) = lookup_routing_table(&network);
+    let routing_information_entry = RoutingInformationEntry {
+        prefix: network,
+        destination_address,
+        output_interface};
+    loc_lib.0.push(routing_information_entry);
+}
+
+fn lookup_routing_table(network: &IpPrefix) -> (Ipv4Addr, Interface) {
+    (Ipv4Addr::from_str("192.168.2.5").unwrap(), Interface)
+}
 
 struct PathAttribute;
 
@@ -294,7 +329,6 @@ impl fmt::Display for CannotIdentifyTheRawDataAsBgpPacketError {
         write!(f, "cannot identify the raw data as bgp packet")
     }
 }
-
 
 fn identify_what_kind_of_bgp_packet_is(raw_data: &Vec<u8>) -> Result<BgpMessageType, CannotIdentifyTheRawDataAsBgpPacketError> {
     match raw_data[18] {
