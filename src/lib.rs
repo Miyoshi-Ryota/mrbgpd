@@ -1,6 +1,6 @@
 pub mod bgp;
 pub mod finite_state_machine;
-
+pub mod routing;
 use std::{net::Ipv4Addr, str::FromStr, string::ParseError};
 use crate::bgp::AutonomousSystemNumber;
 

@@ -59,7 +59,7 @@ fn main() {
              Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                  data_buffer.buf.append(&mut buf);
                  // Tcp connection is still open and there no data in socket.
-             }    
+             }
              Err(e) => {
                  println!("other error happen: {:?}, : {:?}", e, buf);
              }
