@@ -1,7 +1,9 @@
 use rtnetlink::{new_connection, Error, Handle, IpVersion};
+use rtnetlink::packet::rtnl::RouteMessage;
 use futures::stream::{self, TryStreamExt};
 
-async fn aaa() -> Result<(), ()> {
+
+async fn routing_table_example() -> Result<(), ()> {
     let (connection, handle, _) = new_connection().unwrap();
     tokio::spawn(connection);
 
@@ -24,6 +26,17 @@ fn print_typename<T>(_: &T) {
     println!("{}", std::any::type_name::<T>());
 }
 
+async fn get_all_ip_v4_routes() -> Result<Vec<RouteMessage>, Error> {
+    let (connection, handle, _) = new_connection().unwrap();
+    tokio::spawn(connection);
+    let mut routes = handle.route().get(IpVersion::V4).execute();
+    let mut result = vec![];
+    while let Some(route) = routes.try_next().await? {
+        result.push(route);
+    }
+    Ok(result)
+}
+
 async fn dump_addresses(handle: Handle, ip_version: IpVersion) -> Result<(), Error> {
     let mut routes = handle.route().get(ip_version).execute();
     while let Some(route) = routes.try_next().await? {
@@ -39,7 +52,7 @@ mod tests {
 
     #[tokio::test]
     async fn it_works() {
-        aaa().await;
+        routing_table_example().await;
         assert_eq!(2 + 2, 4);
     }
 }
