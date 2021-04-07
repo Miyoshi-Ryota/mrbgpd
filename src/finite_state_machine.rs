@@ -4,6 +4,10 @@ use std::net;
 use std::{thread, time};
 use net::{TcpListener, TcpStream};
 use std::io::Write;
+use crate::rib::LocRib;
+use crate::routing::get_all_ip_v4_routes;
+
+
 pub struct SessionAttribute {
     state: State,
     connect_retry_counter: usize,
@@ -22,6 +26,7 @@ pub struct fsm {
     pub tcp_connection: Option<net::TcpStream>,
     packet_buffer: [u8; 1024],
     pub event_queue: EventQueue,
+    loc_rib: LocRib,
 }
 
 pub struct EventQueue {
@@ -51,6 +56,7 @@ impl fsm {
         let tcp_connection = None;
         let event_queue = EventQueue::new();
         let packet_buffer = [0u8; 1024];
+        let loc_rib = LocRib::new(vec![]);
         Self { 
             config,
             session_attribute,
@@ -58,6 +64,7 @@ impl fsm {
             tcp_connection,
             packet_buffer,
             event_queue,
+            loc_rib,
         }
     }
 
@@ -65,7 +72,7 @@ impl fsm {
         self.session_attribute.get_state()
     }
 
-    pub fn handle_event(&mut self, event: &Event) {
+    pub async fn handle_event(&mut self, event: &Event) {
         match self.get_state() {
             &State::Idle => {
                 match event {
@@ -405,6 +412,9 @@ impl fsm {
                         //      - changes its state to Established.
                         self.session_attribute.hold_timer = SystemTime::now();
                         self.session_attribute.state = State::Established;
+                        let mut route = get_all_ip_v4_routes().await.unwrap();
+                        self.loc_rib.add(&mut route);
+                        self.event_queue.push(Event::LocRibChanged);
                     },
                     _ => {
                         // In response to any other event (Events 9, 12-13, 20, 27-28), the
@@ -578,6 +588,8 @@ pub enum Event {
     KeepAliveMsg, // Event 26
     UpdateMsg, // Event 27
     UpdateMsgErr, // Event 28
+    // Original (There is no event in RFC)
+    LocRibChanged,
 }
 #[derive(Debug)]
 pub enum State {

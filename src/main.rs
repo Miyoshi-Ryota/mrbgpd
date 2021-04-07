@@ -5,6 +5,7 @@ use std::{thread, time};
 use std::io::Read;
 use std::env;
 use bgp::bgp_packet_handler;
+use tokio;
 
 struct DataBuffer {
     pub buf: Vec<u8>,
@@ -36,7 +37,8 @@ impl DataBuffer {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
     let config = Config::parse_args(args);
     println!("{:?}", &config);
@@ -48,7 +50,7 @@ fn main() {
     loop {
         println!("{:?}", fsm.get_state());
         match fsm.event_queue.pop() {
-            Some(event) => fsm.handle_event(&event),
+            Some(event) => fsm.handle_event(&event).await,
             None => (),
         }
         let mut buf = vec![];

@@ -26,7 +26,7 @@ fn print_typename<T>(_: &T) {
     println!("{}", std::any::type_name::<T>());
 }
 
-async fn get_all_ip_v4_routes() -> Result<Vec<RouteMessage>, Error> {
+pub async fn get_all_ip_v4_routes() -> Result<Vec<RouteMessage>, Error> {
     let (connection, handle, _) = new_connection().unwrap();
     tokio::spawn(connection);
     let mut routes = handle.route().get(IpVersion::V4).execute();
