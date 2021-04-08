@@ -1,4 +1,5 @@
 use rtnetlink::packet::RouteMessage;
+use std::str::FromStr;
 
 pub struct LocRib(Vec<RouteMessage>);
 

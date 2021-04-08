@@ -1,6 +1,7 @@
 use std::{convert::TryInto, fmt, io::Read, net::{Ipv4Addr, TcpStream}, option, str::FromStr};
 
 use crate::finite_state_machine::{Event, EventQueue};
+use crate::routing::IpPrefix;
 
 enum BGPVersion{
     V1,
@@ -174,12 +175,6 @@ struct BgpUpdateMessage {
     withdrawn_routes: Vec<IpPrefix>,
     total_path_attribute_length: u16,
     path_attributes: Vec<PathAttribute>,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct IpPrefix {
-    network_address: Ipv4Addr, // ToDo: 正確にはネットワークアドレス的なやつなのでipv4addrを使うのは不適切
-    prefix_length: u8,
 }
 
 struct RoutingInformationEntry {

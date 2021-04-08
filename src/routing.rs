@@ -1,7 +1,27 @@
 use rtnetlink::{new_connection, Error, Handle, IpVersion};
 use rtnetlink::packet::rtnl::RouteMessage;
 use futures::stream::{self, TryStreamExt};
+use std::str::FromStr;
+use std::net::Ipv4Addr;
+use std::net::AddrParseError;
 
+#[derive(Debug, Clone, Copy)]
+pub struct IpPrefix {
+    network_address: Ipv4Addr, // ToDo: 正確にはネットワークアドレス的なやつなのでipv4addrを使うのは不適切
+    prefix_length: u8,
+}
+
+impl FromStr for IpPrefix {
+    type Err = AddrParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split('/');
+        let network_address: Ipv4Addr = split.as_str().parse().unwrap();
+        split.next();
+        let prefix_length: u8 = split.as_str().parse().unwrap();
+        Ok(Self {network_address, prefix_length,})
+    }
+}
 
 async fn routing_table_example() -> Result<(), ()> {
     let (connection, handle, _) = new_connection().unwrap();
