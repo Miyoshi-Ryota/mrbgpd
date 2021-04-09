@@ -5,7 +5,7 @@ use std::{thread, time};
 use net::{TcpListener, TcpStream};
 use std::io::Write;
 use crate::rib::LocRib;
-use crate::routing::get_all_ip_v4_routes;
+use crate::routing::lookup_network_route;
 
 
 pub struct SessionAttribute {
@@ -412,8 +412,8 @@ impl fsm {
                         //      - changes its state to Established.
                         self.session_attribute.hold_timer = SystemTime::now();
                         self.session_attribute.state = State::Established;
-                        let mut route = get_all_ip_v4_routes().await.unwrap();
-                        self.loc_rib.add(&mut route);
+                        let mut routes = lookup_network_route(&self.config.advertisement_network).await.unwrap();
+                        self.loc_rib.add(&mut routes);
                         self.event_queue.push(Event::LocRibChanged);
                     },
                     _ => {

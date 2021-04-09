@@ -2,13 +2,43 @@ use rtnetlink::{new_connection, Error, Handle, IpVersion};
 use rtnetlink::packet::rtnl::RouteMessage;
 use futures::stream::{self, TryStreamExt};
 use std::str::FromStr;
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, IpAddr};
 use std::net::AddrParseError;
 
 #[derive(Debug, Clone, Copy)]
 pub struct IpPrefix {
     network_address: Ipv4Addr, // ToDo: 正確にはネットワークアドレス的なやつなのでipv4addrを使うのは不適切
     prefix_length: u8,
+}
+
+impl IpPrefix {
+
+    fn does_include(&self, other: &Self) -> bool {
+        // 192.168.0.0 / 16
+        // same.same.0.0
+        // 192.168.5.0 / 24
+        // same.same.00000101.0
+        if self.prefix_length > other.prefix_length {
+            return false;
+        };
+        let mut self_bits: String = String::from(""); 
+        let mut other_bits: String = String::from(""); 
+
+        let other_octate = other.network_address.octets();
+        for i in self.network_address.octets().iter() {
+            self_bits.push_str(&format!("{:8b}", i));
+        }
+        for i in other.network_address.octets().iter() {
+            other_bits.push_str(&format!("{:8b}", i));
+        }
+
+        for i in 0..self.prefix_length {
+            if self_bits.chars().nth(i as usize) != other_bits.chars().nth(i as usize) {
+                return false;
+            }
+        }
+        true
+    } 
 }
 
 impl FromStr for IpPrefix {
@@ -57,6 +87,25 @@ pub async fn get_all_ip_v4_routes() -> Result<Vec<RouteMessage>, Error> {
     Ok(result)
 }
 
+pub async fn lookup_network_route(ip_prefix: &IpPrefix) -> Result<Vec<RouteMessage>, Error> {
+    let all_routes = get_all_ip_v4_routes().await.unwrap();
+    let mut result = vec![];
+    for route in all_routes {
+        let (network_address, prefix_length) = route.source_prefix().unwrap();
+        let network_address = match network_address {
+            IpAddr::V4(addr) => addr,
+            IpAddr::V6(_) => panic!(),
+        };
+        let prefix = IpPrefix {
+            network_address, prefix_length,
+        };
+        if ip_prefix.does_include(&prefix) {
+            result.push(route);
+        }
+    }
+    Ok(result)
+}
+
 async fn dump_addresses(handle: Handle, ip_version: IpVersion) -> Result<(), Error> {
     let mut routes = handle.route().get(ip_version).execute();
     while let Some(route) = routes.try_next().await? {
@@ -74,5 +123,21 @@ mod tests {
     async fn it_works() {
         routing_table_example().await;
         assert_eq!(2 + 2, 4);
+    }
+
+    #[tokio::test]
+    async fn test_does_ip_prefix_include() {
+        let bigger_ip_prefix = IpPrefix{ 
+            network_address: Ipv4Addr::new(192, 168,  0,  0),
+            prefix_length: 16,
+        };
+
+        let smaller_ip_prefix = IpPrefix {
+            network_address: Ipv4Addr::new(192, 168, 5, 0),
+            prefix_length: 24,
+        };
+
+        assert_eq!(bigger_ip_prefix.does_include(&smaller_ip_prefix), true);
+        assert_eq!(smaller_ip_prefix.does_include(&bigger_ip_prefix), false);
     }
 }
