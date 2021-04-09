@@ -21,8 +21,8 @@ impl IpPrefix {
         if self.prefix_length > other.prefix_length {
             return false;
         };
-        let mut self_bits: String = String::from(""); 
-        let mut other_bits: String = String::from(""); 
+        let mut self_bits: String = String::from("");
+        let mut other_bits: String = String::from("");
 
         let other_octate = other.network_address.octets();
         for i in self.network_address.octets().iter() {
@@ -38,7 +38,7 @@ impl IpPrefix {
             }
         }
         true
-    } 
+    }
 }
 
 impl FromStr for IpPrefix {
@@ -127,7 +127,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_does_ip_prefix_include() {
-        let bigger_ip_prefix = IpPrefix{ 
+        let bigger_ip_prefix = IpPrefix {
             network_address: Ipv4Addr::new(192, 168,  0,  0),
             prefix_length: 16,
         };

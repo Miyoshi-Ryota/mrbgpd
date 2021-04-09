@@ -125,14 +125,14 @@ impl BgpOpenMessage {
             u16::from_be_bytes(raw_data[22..24].try_into().unwrap()));
         let bgp_identifier = Ipv4Addr::new(raw_data[24], raw_data[25], raw_data[26], raw_data[27]);
         let optional_parameter_length = raw_data[28];
-        
+
         // ToDo: optional parameter ni taiou suru
         let optional_parameters = if optional_parameter_length != 0 {
             panic!()
         } else {
             vec![]
         };
-        
+
         Self {
             header,
             version,

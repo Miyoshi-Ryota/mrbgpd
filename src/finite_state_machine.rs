@@ -57,7 +57,7 @@ impl fsm {
         let event_queue = EventQueue::new();
         let packet_buffer = [0u8; 1024];
         let loc_rib = LocRib::new(vec![]);
-        Self { 
+        Self {
             config,
             session_attribute,
             tcp_listener,
@@ -135,14 +135,14 @@ impl fsm {
                         // system checks the DelayOpen attribute prior to processing.  If the
                         // DelayOpen attribute is set to TRUE, the local system:
                         // - DelayOpenAttributeは実装しておらず常にFALSEなので省略
- 
+
                         // If the DelayOpen attribute is set to FALSE, the local system:
                         // - stops the ConnectRetryTimer (if running) and sets the
                         //   ConnectRetryTimer to zero,
                         // - completes BGP initialization
                         // - sends an OPEN message to its peer,
                         // - sets the HoldTimer to a large value, and
-                        // - changes its state to OpenSent. 
+                        // - changes its state to OpenSent.
                         // A HoldTimer value of 4 minutes is suggested.
                         self.session_attribute.connect_retry_timer = SystemTime::now();
                         let open_message = BgpOpenMessage::new(
@@ -168,7 +168,7 @@ impl fsm {
                         self.event_queue.push(Event::ManualStart);
                     },
                     &Event::BgpHeaderErr | &Event::BgpOpenMsgErr => {
-                        // If BGP message header checking (Event 21) or OPEN message checking 
+                        // If BGP message header checking (Event 21) or OPEN message checking
                         // detects an error (Event 22) (see Section 6.2), the local system:
                         // - (optionally) If the SendNOTIFICATIONwithoutOPEN attribute is
                         //   set to TRUE, then the local system first sends a NOTIFICATION
@@ -342,7 +342,7 @@ impl fsm {
                         // - increments the ConnectRetryCounter by 1,
                         // - (optionally) performs peer oscillation damping if the
                         //   DampPeerOscillations attribute is set to TRUE, and
-                        // - changes its state to Idle.                  
+                        // - changes its state to Idle.
                     },
                     &Event::KeepaliveTimerExpires => {
                         // If the local system receives a KeepaliveTimer_Expires event (Event
@@ -375,7 +375,7 @@ impl fsm {
                         //   - sets the ConnectRetryTimer to zero,
                         //   - releases all BGP resources,
                         //   - drops the TCP connection, and
-                        //   - changes its state to Idle.                  
+                        //   - changes its state to Idle.
                     },
                     &Event::BgpOpen => {
                         // If the local system receives a valid OPEN message (BGPOpen (Event
@@ -424,7 +424,7 @@ impl fsm {
                         //   - sets the ConnectRetryTimer to zero,
                         //   - releases all BGP resources
                         //   - drops the TCP connection,
-                        //   - increments the ConnectRetryCounter by 1,                  
+                        //   - increments the ConnectRetryCounter by 1,
                     },
                 }
             },
@@ -463,12 +463,12 @@ impl fsm {
                         //     value is zero.
                         // Each time the local system sends a KEEPALIVE or UPDATE message, it
                         // restarts its KeepaliveTimer, unless the negotiated HoldTime value
-                        // is zero.                  
+                        // is zero.
                     },
                     &Event::TcpCrAcked | &Event::TcpConnectionConfirmed => {
                         // In response to an indication that the TCP connection is
                         // successfully established (Event 16 or Event 17), the second
-                        // connection SHALL be tracked until it sends an OPEN message.                  
+                        // connection SHALL be tracked until it sends an OPEN message.
                     },
                     &Event::BgpOpen => {
                         // If a valid OPEN message (BGPOpen (Event 19)) is received, and if
@@ -501,7 +501,7 @@ impl fsm {
                     },
                     &Event::KeepAliveMsg => {
                         // If the local system receives a KEEPALIVE message (Event 26), the
-                        // local system:                  
+                        // local system:
                         // - restarts its HoldTimer, if the negotiated HoldTime value is
                         // non-zero, and
                         // - remains in the Established state.
@@ -526,7 +526,7 @@ impl fsm {
                         //   - increments the ConnectRetryCounter by 1,
                         //   - (optionally) performs peer oscillation damping if the
                         //     DampPeerOscillations attribute is set to TRUE, and
-                        //   - changes its state to Idle.                  
+                        //   - changes its state to Idle.
                     }
                     _ => {
                         // In response to any other event (Events 9, 12-13, 20-22), the local
