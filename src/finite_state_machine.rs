@@ -1,10 +1,10 @@
-use crate::{Config, Mode, bgp::BgpOpenMessage, bgp::BgpKeepaliveMessage};
+use crate::{Config, Mode, bgp::BgpKeepaliveMessage, bgp::BgpOpenMessage};
 use std::{alloc::System, time::{Duration, SystemTime}};
 use std::net;
 use std::{thread, time};
 use net::{TcpListener, TcpStream};
 use std::io::Write;
-use crate::rib::LocRib;
+use crate::rib::{LocRib, AdjRibOut};
 use crate::routing::lookup_network_route;
 
 
@@ -27,6 +27,7 @@ pub struct fsm {
     packet_buffer: [u8; 1024],
     pub event_queue: EventQueue,
     loc_rib: LocRib,
+    adj_rib_out: AdjRibOut,
 }
 
 pub struct EventQueue {
@@ -57,6 +58,8 @@ impl fsm {
         let event_queue = EventQueue::new();
         let packet_buffer = [0u8; 1024];
         let loc_rib = LocRib::new(vec![]);
+        let adj_rib_out = LocRib::new(vec![]);
+
         Self {
             config,
             session_attribute,
@@ -65,7 +68,15 @@ impl fsm {
             packet_buffer,
             event_queue,
             loc_rib,
+            adj_rib_out,
         }
+    }
+
+    fn phase3_disseminate_route(&mut self) {
+        // ToDo: nexthopが存在するかなどのチェックや、
+        // ルートが消えることのチェックを行っていない。
+        let mut loc_rib = self.loc_rib.clone();
+        self.adj_rib_out.add(&mut loc_rib.0);
     }
 
     pub fn get_state(&self) -> &State {
@@ -527,7 +538,11 @@ impl fsm {
                         //   - (optionally) performs peer oscillation damping if the
                         //     DampPeerOscillations attribute is set to TRUE, and
                         //   - changes its state to Idle.
-                    }
+                    },
+                    &Event::LocRibChanged => {
+                        // Kick Phase 3 (LocRib => Adj-RIB-Out);
+                        self.phase3_disseminate_route();
+                    },
                     _ => {
                         // In response to any other event (Events 9, 12-13, 20-22), the local
                         // system:

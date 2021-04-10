@@ -1,13 +1,17 @@
 use rtnetlink::packet::RouteMessage;
 
-pub struct LocRib(Vec<RouteMessage>);
+#[derive(Clone)]
+pub struct Rib(pub Vec<RouteMessage>);
 
-impl LocRib {
+impl Rib {
     pub fn new(routing_table: Vec<RouteMessage>) -> LocRib {
-        LocRib(routing_table)
+        Rib(routing_table)
     }
 
     pub fn add(&mut self, routing_information: &mut Vec<RouteMessage>) {
         self.0.append(routing_information);
     }
 }
+
+pub type LocRib = Rib;
+pub type AdjRibOut = Rib;
