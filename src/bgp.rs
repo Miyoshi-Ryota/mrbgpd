@@ -235,6 +235,12 @@ enum PathAttribute {
     // (<PathAttribute Type>, <attribute length>, <attribute value>)
     // <PathAttribute Type>: (<attr flags>: u8, <attr type code>: u8)
     //  - attr flags: 110[ifattribute length is one octet then 0 two octets then 1]0000
+    //    - 0bit: optional(1) or well-known(0)
+    //    - 1bit: transitive(1) or non-transitive(0) // well-knownは絶対transitive
+    //    - 2bit: optional transitive(1), complete(0) // well-knownとoptional-non-transitiveは0
+    //            (optionだけどとりあえずわからなくても転送させるようなやつは1)
+    //    - 3bit: if attribute length is one octet then 0 two octets then 1
+    //    - 4-7 bit: 0
     //  - attr type code: type code u8
     // <attribute length>: type内の4bit目に応じてu8 or u16 (1 byte or 2 bytes)でattribute valueのオクテット数を表す
     // <attribute value>: ものによる。
@@ -250,7 +256,7 @@ impl PathAttribute {
     pub fn decode(&self) -> Vec<u8> {
         match self {
             &PathAttribute::Origin(origin) => {
-                let attribute_flag: u8 = 0b11000000;
+                let attribute_flag: u8 = 0b01000000;
                 let attribute_type_code = 0b1;
                 let path_attribute_length = 1;
                 vec![attribute_flag, attribute_type_code, path_attribute_length, origin.value()]
