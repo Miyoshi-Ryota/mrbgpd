@@ -230,6 +230,41 @@ impl Origin {
     }
 }
 
+enum AsPath {
+    AsSet(Vec<u16>),
+    AsSequence(Vec<u16>),
+}
+
+impl AsPath {
+    pub fn value(&self) -> Vec<u8> {
+        match self {
+            &AsPath::AsSet(v) => {
+                let path_segment_type: u8 = 1;
+                let path_segment_length: u8 = v.len().try_into().unwrap();
+                let mut result = vec![path_segment_type, path_segment_length];
+                for i in v.iter() {
+                    let bytes = i.to_be_bytes();
+                    for j in bytes.iter() {
+                        result.push(*j);
+                    }
+                }
+                result
+            },
+            &AsPath::AsSequence(v) => {
+                let path_segment_type: u8 = 1;
+                let path_segment_length: u8 = v.len().try_into().unwrap();
+                let mut result = vec![path_segment_type, path_segment_length];
+                for i in v.iter() {
+                    let bytes = i.to_be_bytes();
+                    for j in bytes.iter() {
+                        result.push(*j);
+                    }
+                }
+                result
+            },
+        }
+    }
+}
 enum PathAttribute {
     // PathAttributeのバイト列の表現は以下の通り
     // (<PathAttribute Type>, <attribute length>, <attribute value>)
@@ -245,7 +280,7 @@ enum PathAttribute {
     // <attribute length>: type内の4bit目に応じてu8 or u16 (1 byte or 2 bytes)でattribute valueのオクテット数を表す
     // <attribute value>: ものによる。
     Origin(Origin),
-    AsPath,
+    AsPath(AsPath),
     NextHop,
     LocalPref, // EBGPではつかわない
     AtomicAggregate, // 実装は後でで良い
@@ -261,11 +296,14 @@ impl PathAttribute {
                 let path_attribute_length = 1;
                 vec![attribute_flag, attribute_type_code, path_attribute_length, origin.value()]
             },
-            &PathAttribute::AsPath => {
-                let path_segment_type = 0;
-                let path_segment_length = 0;
-                let path_segment_value = 0;
-                vec![]
+            &PathAttribute::AsPath(as_path) => {
+                let attribute_flag: u8 = 0b01000000;
+                let attribute_type_code = 0b1;
+                let mut attribute_value = as_path.value();
+                let attribute_length: u8 = attribute_value.len().try_into().unwrap();
+                let result = vec![attribute_flag, attribute_type_code, attribute_length];
+                result.append(&mut attribute_value);
+                result
             },
             &PathAttribute::NextHop => vec![],
             _ => vec![],
