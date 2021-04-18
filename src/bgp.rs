@@ -180,6 +180,12 @@ struct BgpUpdateMessage {
 impl BgpUpdateMessage {
     pub fn is_created_from_adj_rib_out() -> Self {
         // ToDo: 実装する
+        BgpUpdateMessage {
+            withdrawn_routes_length: 0,
+            withdrawn_routes: vec![],
+            total_path_attribute_length: 0,
+            path_attributes: vec![]
+        }
     }
 }
 
@@ -237,7 +243,7 @@ enum AsPath {
 
 impl AsPath {
     pub fn value(&self) -> Vec<u8> {
-        match self {
+        match &self {
             &AsPath::AsSet(v) => {
                 let path_segment_type: u8 = 1;
                 let path_segment_length: u8 = v.len().try_into().unwrap();
@@ -289,7 +295,7 @@ enum PathAttribute {
 
 impl PathAttribute {
     pub fn decode(&self) -> Vec<u8> {
-        match self {
+        match &self {
             &PathAttribute::Origin(origin) => {
                 let attribute_flag: u8 = 0b01000000;
                 let attribute_type_code = 0b1;
@@ -301,7 +307,7 @@ impl PathAttribute {
                 let attribute_type_code = 0b1;
                 let mut attribute_value = as_path.value();
                 let attribute_length: u8 = attribute_value.len().try_into().unwrap();
-                let result = vec![attribute_flag, attribute_type_code, attribute_length];
+                let mut result = vec![attribute_flag, attribute_type_code, attribute_length];
                 result.append(&mut attribute_value);
                 result
             },
