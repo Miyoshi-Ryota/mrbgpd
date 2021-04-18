@@ -231,6 +231,13 @@ impl Origin {
 }
 
 enum PathAttribute {
+    // PathAttributeのバイト列の表現は以下の通り
+    // (<PathAttribute Type>, <attribute length>, <attribute value>)
+    // <PathAttribute Type>: (<attr flags>: u8, <attr type code>: u8)
+    //  - attr flags: 110[ifattribute length is one octet then 0 two octets then 1]0000
+    //  - attr type code: type code u8
+    // <attribute length>: type内の4bit目に応じてu8 or u16 (1 byte or 2 bytes)でattribute valueのオクテット数を表す
+    // <attribute value>: ものによる。
     Origin(Origin),
     AsPath,
     NextHop,
@@ -243,11 +250,8 @@ impl PathAttribute {
     pub fn decode(&self) -> Vec<u8> {
         match self {
             &PathAttribute::Origin(origin) => {
-                // [attr flags[8bit]| attr,type code]
-                // attr flags: 110[ifattribute length is one octet then 0 two octets then 1]0000
-                // attr type code: [type code 2bit][length of attribute data in octates, normally 1bit, attribute length is two octets then 2bit][remain attrybute type]
                 let attribute_flag: u8 = 0b11000000;
-                let attribute_type_code = 0b01100000;
+                let attribute_type_code = 0b1;
                 let path_attribute_length = 1;
                 vec![attribute_flag, attribute_type_code, path_attribute_length, origin.value()]
             },
