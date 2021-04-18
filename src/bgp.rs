@@ -1,4 +1,4 @@
-use std::{convert::TryInto, fmt, io::Read, net::{Ipv4Addr, TcpStream}, option, str::FromStr};
+use std::{convert::TryInto, fmt, fs::create_dir_all, io::Read, net::{Ipv4Addr, TcpStream}, option, str::FromStr};
 
 use crate::finite_state_machine::{Event, EventQueue};
 use crate::routing::IpPrefix;
@@ -177,6 +177,12 @@ struct BgpUpdateMessage {
     path_attributes: Vec<PathAttribute>,
 }
 
+impl BgpUpdateMessage {
+    pub fn is_created_from_adj_rib_out() -> Self {
+        // ToDo: 実装する
+    }
+}
+
 struct RoutingInformationEntry {
     prefix: IpPrefix,
     destination_address: Ipv4Addr,
@@ -208,7 +214,54 @@ fn lookup_routing_table(network: &IpPrefix) -> (Ipv4Addr, Interface) {
     (Ipv4Addr::from_str("192.168.2.5").unwrap(), Interface)
 }
 
-struct PathAttribute;
+enum Origin {
+    Igp,
+    Egp,
+    Incompleted,
+}
+
+impl Origin {
+    pub fn value(&self) -> u8 {
+        match self {
+            &Origin::Igp => 0b0,
+            &Origin::Egp => 0b1,
+            &Origin::Incompleted => 0b10,
+        }
+    }
+}
+
+enum PathAttribute {
+    Origin(Origin),
+    AsPath,
+    NextHop,
+    LocalPref, // EBGPではつかわない
+    AtomicAggregate, // 実装は後でで良い
+    Aggregator, // 実装は後でで良い
+}
+
+impl PathAttribute {
+    pub fn decode(&self) -> Vec<u8> {
+        match self {
+            &PathAttribute::Origin(origin) => {
+                // [attr flags[8bit]| attr,type code]
+                // attr flags: 110[ifattribute length is one octet then 0 two octets then 1]0000
+                // attr type code: [type code 2bit][length of attribute data in octates, normally 1bit, attribute length is two octets then 2bit][remain attrybute type]
+                let attribute_flag: u8 = 0b11000000;
+                let attribute_type_code = 0b01100000;
+                let path_attribute_length = 1;
+                vec![attribute_flag, attribute_type_code, path_attribute_length, origin.value()]
+            },
+            &PathAttribute::AsPath => {
+                let path_segment_type = 0;
+                let path_segment_length = 0;
+                let path_segment_value = 0;
+                vec![]
+            },
+            &PathAttribute::NextHop => vec![],
+            _ => vec![],
+        }
+    }
+}
 
 pub struct BgpKeepaliveMessage {
     header: BgpMessageHeader,

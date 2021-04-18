@@ -79,6 +79,10 @@ impl fsm {
         self.adj_rib_out.add(&mut loc_rib.0);
     }
 
+    fn send_update_message(&self) {
+        ()
+    }
+
     pub fn get_state(&self) -> &State {
         self.session_attribute.get_state()
     }
@@ -542,7 +546,11 @@ impl fsm {
                     &Event::LocRibChanged => {
                         // Kick Phase 3 (LocRib => Adj-RIB-Out);
                         self.phase3_disseminate_route();
+                        self.event_queue.push(Event::AdjRibOutChanged);
                     },
+                    &Event::AdjRibOutChanged => {
+                        self.send_update_message();
+                    }
                     _ => {
                         // In response to any other event (Events 9, 12-13, 20-22), the local
                         // system:
@@ -605,6 +613,7 @@ pub enum Event {
     UpdateMsgErr, // Event 28
     // Original (There is no event in RFC)
     LocRibChanged,
+    AdjRibOutChanged,
 }
 #[derive(Debug)]
 pub enum State {
