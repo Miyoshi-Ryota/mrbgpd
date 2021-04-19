@@ -1,4 +1,4 @@
-use crate::{Config, Mode, bgp::BgpKeepaliveMessage, bgp::BgpOpenMessage};
+use crate::{Config, Mode, bgp::BgpKeepaliveMessage, bgp::BgpOpenMessage, bgp::BgpUpdateMessage};
 use std::{alloc::System, time::{Duration, SystemTime}};
 use std::net;
 use std::{thread, time};
@@ -549,6 +549,9 @@ impl fsm {
                         self.event_queue.push(Event::AdjRibOutChanged);
                     },
                     &Event::AdjRibOutChanged => {
+                        let bgp_update_message = BgpUpdateMessage::is_created_from_adj_rib_out(&self.adj_rib_out);
+                        let bgp_update_message = bgp_update_message.decode();
+                        self.tcp_connection.as_ref().unwrap().write(&bgp_update_message[..]).expect("cannot send open message");
                         self.send_update_message();
                     }
                     _ => {

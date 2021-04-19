@@ -1,5 +1,5 @@
-use std::{convert::TryInto, fmt, fs::create_dir_all, io::Read, net::{Ipv4Addr, TcpStream}, option, str::FromStr};
-
+use std::{convert::TryInto, fmt, fs::create_dir_all, io::Read, net::{Ipv4Addr, IpAddr, TcpStream}, option, str::FromStr};
+use crate::rib::{AdjRibOut, Rib};
 use crate::finite_state_machine::{Event, EventQueue};
 use crate::routing::IpPrefix;
 
@@ -170,22 +170,48 @@ impl BgpOpenMessage {
     }
 }
 
-struct BgpUpdateMessage {
+pub struct BgpUpdateMessage {
     withdrawn_routes_length: u16,
     withdrawn_routes: Vec<IpPrefix>,
     total_path_attribute_length: u16,
     path_attributes: Vec<PathAttribute>,
+    network_layer_reachability_information: Vec<IpPrefix>,
 }
 
 impl BgpUpdateMessage {
-    pub fn is_created_from_adj_rib_out() -> Self {
-        // ToDo: 実装する
+    pub fn new() -> Self {
         BgpUpdateMessage {
             withdrawn_routes_length: 0,
             withdrawn_routes: vec![],
             total_path_attribute_length: 0,
-            path_attributes: vec![]
+            path_attributes: vec![],
+            network_layer_reachability_information: vec![],
         }
+    }
+    pub fn is_created_from_adj_rib_out(adj_rib_out: &AdjRibOut) -> Self {
+        // ToDo: 実装する
+        let advertise_route = adj_rib_out.get_new_route();
+        let mut advertise_route_ip_prefixes = vec![];
+        for entry in advertise_route {
+            if let Some(ip_prefix) = entry.destination_prefix() {
+                if let IpAddr::V4(ipaddr) = ip_prefix.0 {
+                    let ip_prefix = IpPrefix::new(ipaddr, ip_prefix.1);
+                    advertise_route_ip_prefixes.push(ip_prefix);
+                }
+            }
+        }
+
+        BgpUpdateMessage {
+            withdrawn_routes_length: 0,
+            withdrawn_routes: vec![],
+            total_path_attribute_length: 0,
+            path_attributes: vec![],
+            network_layer_reachability_information: advertise_route_ip_prefixes,
+        }
+    }
+
+    pub fn decode(&self) -> Vec<u8> {
+        vec![]
     }
 }
 
@@ -195,26 +221,8 @@ struct RoutingInformationEntry {
     output_interface: Interface
 }
 
-struct LocRib(Vec<RoutingInformationEntry>);
-struct AdjRibsOut(Vec<RoutingInformationEntry>);
 struct Interface;
 
-fn disseminate_routes() -> AdjRibsOut {
-    AdjRibsOut(vec![])
-    // Phase 3
-}
-
-fn put_route_of_network_config_on_loc_lib(loc_lib: &mut LocRib, network: IpPrefix) -> () {
-    // 最初の送信するルートはhttps://www.infraexpert.com/study/bgpz06.htmlによると
-    // networkコマンドで送ったりするっぽいな、fsmのコンフィグをいじるようにしよう
-    // loc_libはグローバルかな
-    let (destination_address, output_interface) = lookup_routing_table(&network);
-    let routing_information_entry = RoutingInformationEntry {
-        prefix: network,
-        destination_address,
-        output_interface};
-    loc_lib.0.push(routing_information_entry);
-}
 
 fn lookup_routing_table(network: &IpPrefix) -> (Ipv4Addr, Interface) {
     (Ipv4Addr::from_str("192.168.2.5").unwrap(), Interface)
@@ -317,7 +325,7 @@ impl PathAttribute {
                 let attribute_length :u8 = 4;
                 let mut attribute_value = next_hop.octets().to_vec();
                 let mut result = vec![attribute_flag, attribute_type_code, attribute_length];
-                result.append(attribute_value);
+                result.append(&mut attribute_value);
                 result
             },
             _ => vec![],

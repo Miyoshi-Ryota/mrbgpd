@@ -12,8 +12,15 @@ pub struct IpPrefix {
 }
 
 impl IpPrefix {
+    pub fn new(network_address: Ipv4Addr, prefix_length: u8) -> Self {
+        Self {
+            network_address,
+            prefix_length,
+        }
+    }
 
-    fn does_include(&self, other: &Self) -> bool {
+
+    pub fn does_include(&self, other: &Self) -> bool {
         // 192.168.0.0 / 16
         // same.same.0.0
         // 192.168.5.0 / 24
