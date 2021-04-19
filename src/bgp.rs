@@ -304,7 +304,7 @@ impl PathAttribute {
             },
             &PathAttribute::AsPath(as_path) => {
                 let attribute_flag: u8 = 0b01000000;
-                let attribute_type_code = 0b1;
+                let attribute_type_code = 2;
                 let mut attribute_value = as_path.value();
                 let attribute_length: u8 = attribute_value.len().try_into().unwrap();
                 let mut result = vec![attribute_flag, attribute_type_code, attribute_length];
