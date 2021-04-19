@@ -549,7 +549,7 @@ impl fsm {
                         self.event_queue.push(Event::AdjRibOutChanged);
                     },
                     &Event::AdjRibOutChanged => {
-                        let bgp_update_message = BgpUpdateMessage::is_created_from_adj_rib_out(&self.adj_rib_out);
+                        let bgp_update_message = BgpUpdateMessage::is_created_from_adj_rib_out(&self.adj_rib_out, &self.config);
                         let bgp_update_message = bgp_update_message.decode();
                         self.tcp_connection.as_ref().unwrap().write(&bgp_update_message[..]).expect("cannot send open message");
                         self.send_update_message();

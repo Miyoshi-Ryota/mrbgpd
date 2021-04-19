@@ -1,5 +1,6 @@
 use std::{convert::TryInto, fmt, fs::create_dir_all, io::Read, net::{Ipv4Addr, IpAddr, TcpStream}, option, str::FromStr};
 use crate::rib::{AdjRibOut, Rib};
+use crate::Config;
 use crate::finite_state_machine::{Event, EventQueue};
 use crate::routing::IpPrefix;
 
@@ -188,7 +189,7 @@ impl BgpUpdateMessage {
             network_layer_reachability_information: vec![],
         }
     }
-    pub fn is_created_from_adj_rib_out(adj_rib_out: &AdjRibOut) -> Self {
+    pub fn is_created_from_adj_rib_out(adj_rib_out: &AdjRibOut, config: &Config) -> Self {
         // ToDo: 実装する
         let advertise_route = adj_rib_out.get_new_route();
         let mut advertise_route_ip_prefixes = vec![];
@@ -200,12 +201,15 @@ impl BgpUpdateMessage {
                 }
             }
         }
-
+        let origin = PathAttribute::Origin(Origin::Igp);
+        let as_path = PathAttribute::AsPath(AsPath::AsSequence(vec![config.as_number.0]));
+        let next_hop = PathAttribute::NextHop(config.my_ip_addr);
+        let path_attributes = vec![origin, as_path, next_hop];
         BgpUpdateMessage {
             withdrawn_routes_length: 0,
             withdrawn_routes: vec![],
             total_path_attribute_length: 0,
-            path_attributes: vec![],
+            path_attributes: path_attributes,
             network_layer_reachability_information: advertise_route_ip_prefixes,
         }
     }
