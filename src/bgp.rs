@@ -287,7 +287,7 @@ enum PathAttribute {
     // <attribute value>: ものによる。
     Origin(Origin),
     AsPath(AsPath),
-    NextHop,
+    NextHop(Ipv4Addr),
     LocalPref, // EBGPではつかわない
     AtomicAggregate, // 実装は後でで良い
     Aggregator, // 実装は後でで良い
@@ -311,7 +311,15 @@ impl PathAttribute {
                 result.append(&mut attribute_value);
                 result
             },
-            &PathAttribute::NextHop => vec![],
+            &PathAttribute::NextHop(next_hop) => {
+                let attribute_flag: u8 = 0b01000000;
+                let attribute_type_code :u8 = 3;
+                let attribute_length :u8 = 4;
+                let mut attribute_value = next_hop.octets().to_vec();
+                let mut result = vec![attribute_flag, attribute_type_code, attribute_length];
+                result.append(attribute_value);
+                result
+            },
             _ => vec![],
         }
     }
