@@ -117,7 +117,7 @@ pub async fn lookup_network_route(ip_prefix: &IpPrefix) -> Result<Vec<RouteMessa
     let all_routes = get_all_ip_v4_routes().await.unwrap();
     let mut result = vec![];
     for route in all_routes {
-        let (network_address, prefix_length) = route.source_prefix().unwrap();
+        let (network_address, prefix_length) = route.destination_prefix().unwrap();
         let network_address = match network_address {
             IpAddr::V4(addr) => addr,
             IpAddr::V6(_) => panic!(),
