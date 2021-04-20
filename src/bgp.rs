@@ -233,7 +233,9 @@ impl BgpUpdateMessage {
             let mut ip_prefix_byte = i.decode();
             println!("i byte: {:?}", ip_prefix_byte);
             ip_prefix.append(&mut ip_prefix_byte);
+            println!("ip prefix in {:?}", ip_prefix);
         }
+        println!("ip prefix out{:?}", ip_prefix);
         let mut result = vec![];
         result.append(&mut header_bytes);
         result.append(&mut withdrawn_length.to_vec());
@@ -241,7 +243,6 @@ impl BgpUpdateMessage {
         result.append(&mut total_path_attribute_length.to_vec());
         result.append(&mut path_attributes);
         result.append(&mut ip_prefix);
-        println!("{:?}", ip_prefix);
         result
     }
 }
