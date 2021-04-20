@@ -239,6 +239,7 @@ impl BgpUpdateMessage {
         result.append(&mut total_path_attribute_length.to_vec());
         result.append(&mut path_attributes);
         result.append(&mut ip_prefix);
+        println!("{:?}", result);
         result
     }
 }
