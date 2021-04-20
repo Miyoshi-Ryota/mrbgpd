@@ -19,6 +19,26 @@ impl IpPrefix {
         }
     }
 
+    pub fn decode(&self) -> Vec<u8> {
+        let network_address = self.network_address.octets();
+        let mut result = vec![self.prefix_length];
+        if self.prefix_length == 0 {
+            return result;
+        }
+        if self.prefix_length > 0 {
+            result.push(network_address[0]);
+        };
+        if self.prefix_length > 8 {
+            result.push(network_address[1]);
+        };
+        if self.prefix_length > 16 {
+            result.push(network_address[2]);
+        }
+        if self.prefix_length > 24 {
+            result.push(network_address[3]);
+        }
+        result
+    }
 
     pub fn does_include(&self, other: &Self) -> bool {
         // 192.168.0.0 / 16

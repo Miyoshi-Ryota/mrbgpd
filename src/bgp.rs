@@ -172,6 +172,7 @@ impl BgpOpenMessage {
 }
 
 pub struct BgpUpdateMessage {
+    header: BgpMessageHeader,
     withdrawn_routes_length: u16,
     withdrawn_routes: Vec<IpPrefix>,
     total_path_attribute_length: u16,
@@ -180,15 +181,6 @@ pub struct BgpUpdateMessage {
 }
 
 impl BgpUpdateMessage {
-    pub fn new() -> Self {
-        BgpUpdateMessage {
-            withdrawn_routes_length: 0,
-            withdrawn_routes: vec![],
-            total_path_attribute_length: 0,
-            path_attributes: vec![],
-            network_layer_reachability_information: vec![],
-        }
-    }
     pub fn is_created_from_adj_rib_out(adj_rib_out: &AdjRibOut, config: &Config) -> Self {
         // ToDo: 実装する
         let advertise_route = adj_rib_out.get_new_route();
@@ -205,17 +197,49 @@ impl BgpUpdateMessage {
         let as_path = PathAttribute::AsPath(AsPath::AsSequence(vec![config.as_number.0]));
         let next_hop = PathAttribute::NextHop(config.my_ip_addr);
         let path_attributes = vec![origin, as_path, next_hop];
+        let total_path_attributes_length: usize = path_attributes.iter().map(|p|p.decode().len()).sum();
+        let total_path_attributes_length = total_path_attributes_length.try_into().unwrap();
+        
+        let withdrawn_routes_length = 0;
+
+        let header_length = 19;
+        let update_message_length = total_path_attributes_length + withdrawn_routes_length + 4;
+        let header = BgpMessageHeader::new(
+            header_length + update_message_length,
+             BgpMessageType::Update);
         BgpUpdateMessage {
-            withdrawn_routes_length: 0,
+            header,
+            withdrawn_routes_length,
             withdrawn_routes: vec![],
-            total_path_attribute_length: 0,
+            total_path_attribute_length: total_path_attributes_length,
             path_attributes: path_attributes,
             network_layer_reachability_information: advertise_route_ip_prefixes,
         }
     }
 
     pub fn decode(&self) -> Vec<u8> {
-        vec![]
+        let mut header_bytes = self.header.decode_to_u8();
+        let mut withdrawn_length = self.withdrawn_routes_length.to_be_bytes();
+        let mut withdrawn_routes: Vec<u8> = vec![]; // ToDo: Withdrawn routesに対応しておく。
+        let mut total_path_attribute_length = self.total_path_attribute_length.to_be_bytes();
+        let mut path_attributes = vec![];
+        for p in &self.path_attributes {
+            let mut path_attribute_byte = p.decode().clone();
+            path_attributes.append(&mut path_attribute_byte);
+        }
+        let mut ip_prefix = vec![];
+        for i in &self.network_layer_reachability_information {
+            let mut ip_prefix_byte = i.decode();
+            ip_prefix.append(&mut ip_prefix_byte);
+        }
+        let mut result = vec![];
+        result.append(&mut header_bytes);
+        result.append(&mut withdrawn_length.to_vec());
+        result.append(&mut withdrawn_routes);
+        result.append(&mut total_path_attribute_length.to_vec());
+        result.append(&mut path_attributes);
+        result.append(&mut ip_prefix);
+        result
     }
 }
 
