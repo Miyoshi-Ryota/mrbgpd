@@ -231,6 +231,7 @@ impl BgpUpdateMessage {
         for i in &self.network_layer_reachability_information {
             println!("i debug: {:?}", i);
             let mut ip_prefix_byte = i.decode();
+            println!("i byte: {:?}", ip_prefix_byte);
             ip_prefix.append(&mut ip_prefix_byte);
         }
         let mut result = vec![];
