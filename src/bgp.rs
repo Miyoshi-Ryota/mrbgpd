@@ -205,7 +205,7 @@ impl BgpUpdateMessage {
         let header_length = 19;
         let mut nlri_length = 0;
         for i in &advertise_route_ip_prefixes {
-            nlri_length += i.decode().len() * 8;
+            nlri_length += i.decode().len();
         }
         let nlri_length: u16 = nlri_length.try_into().unwrap();
         let update_message_length = total_path_attributes_length
