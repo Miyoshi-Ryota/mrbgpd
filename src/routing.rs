@@ -118,16 +118,17 @@ pub async fn lookup_network_route(ip_prefix: &IpPrefix) -> Result<Vec<RouteMessa
     let mut result = vec![];
     for route in all_routes {
         println!("{:?}", &route);
-        let (network_address, prefix_length) = route.destination_prefix().unwrap();
-        let network_address = match network_address {
-            IpAddr::V4(addr) => addr,
-            IpAddr::V6(_) => panic!(),
-        };
-        let prefix = IpPrefix {
-            network_address, prefix_length,
-        };
-        if ip_prefix.does_include(&prefix) {
-            result.push(route);
+        if let Some((network_address, prefix_length)) = route.destination_prefix() {
+            let network_address = match network_address {
+                IpAddr::V4(addr) => addr,
+                IpAddr::V6(_) => panic!(),
+            };
+            let prefix = IpPrefix {
+                network_address, prefix_length,
+            };
+            if ip_prefix.does_include(&prefix) {
+                result.push(route);
+            }
         }
     }
     Ok(result)
