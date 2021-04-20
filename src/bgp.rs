@@ -207,6 +207,7 @@ impl BgpUpdateMessage {
         for i in &advertise_route_ip_prefixes {
             nlri_length += i.decode().len() * 8;
         }
+        let nlri_length: u16 = nlri_length.try_into().unwrap();
         let update_message_length = total_path_attributes_length
             + withdrawn_routes_length
             + 4
