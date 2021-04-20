@@ -203,7 +203,14 @@ impl BgpUpdateMessage {
         let withdrawn_routes_length = 0;
 
         let header_length = 19;
-        let update_message_length = total_path_attributes_length + withdrawn_routes_length + 4;
+        let mut nlri_length = 0;
+        for i in &advertise_route_ip_prefixes {
+            nlri_length += i.decode().len() * 8;
+        }
+        let update_message_length = total_path_attributes_length
+            + withdrawn_routes_length
+            + 4
+            + nlri_length;
         let header = BgpMessageHeader::new(
             header_length + update_message_length,
              BgpMessageType::Update);
