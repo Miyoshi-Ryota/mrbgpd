@@ -72,10 +72,9 @@ impl FromStr for IpPrefix {
     type Err = AddrParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split('/');
-        let network_address: Ipv4Addr = split.as_str().parse().unwrap();
-        split.next();
-        let prefix_length: u8 = split.as_str().parse().unwrap();
+        let split = s.split('/').collect::<Vec<_>>();
+        let network_address: Ipv4Addr = split[0].parse().unwrap();
+        let prefix_length: u8 = split[1].parse().unwrap();
         Ok(Self {network_address, prefix_length,})
     }
 }
