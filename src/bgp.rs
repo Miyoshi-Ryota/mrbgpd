@@ -189,7 +189,6 @@ impl BgpUpdateMessage {
             if let Some(ip_prefix) = entry.destination_prefix() {
                 if let IpAddr::V4(ipaddr) = ip_prefix.0 {
                     let ip_prefix = IpPrefix::new(ipaddr, ip_prefix.1);
-                    println!("{:?}", ip_prefix);
                     advertise_route_ip_prefixes.push(ip_prefix);
                 }
             }
@@ -240,6 +239,7 @@ impl BgpUpdateMessage {
         result.append(&mut total_path_attribute_length.to_vec());
         result.append(&mut path_attributes);
         result.append(&mut ip_prefix);
+        println!("{:?}", ip_prefix);
         result
     }
 }
