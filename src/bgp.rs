@@ -40,7 +40,7 @@ impl fmt::Display for CannotEncodeU8AsBGPVersion {
     }
 }
 
-
+#[derive(Debug)]
 struct BgpMessageHeader {
     length: u16,
     type_: BgpMessageType,
@@ -171,6 +171,7 @@ impl BgpOpenMessage {
     }
 }
 
+#[derive(Debug)]
 pub struct BgpUpdateMessage {
     header: BgpMessageHeader,
     withdrawn_routes_length: u16,
@@ -345,7 +346,7 @@ struct Interface;
 fn lookup_routing_table(network: &IpPrefix) -> (Ipv4Addr, Interface) {
     (Ipv4Addr::from_str("192.168.2.5").unwrap(), Interface)
 }
-
+#[derive(Debug)]
 enum Origin {
     Igp,
     Egp,
@@ -361,7 +362,7 @@ impl Origin {
         }
     }
 }
-
+#[derive(Debug)]
 enum AsPath {
     AsSet(Vec<u16>),
     AsSequence(Vec<u16>),
@@ -396,7 +397,7 @@ impl AsPath {
             },
         }
     }
-}
+}#[derive(Debug)]
 enum PathAttribute {
     // PathAttributeのバイト列の表現は以下の通り
     // (<PathAttribute Type>, <attribute length>, <attribute value>)
@@ -579,6 +580,7 @@ pub fn bgp_packet_handler(raw_data: &Vec<u8>, event_queue: &mut EventQueue) {
                 BgpMessageType::Update => {
                     let bgp_message = BgpUpdateMessage::encode(raw_data);
                     // packet_bufferに積むかも？
+                    println!("{:?}", bgp_message);
                     event_queue.push(Event::UpdateMsg);
                 },
                 BgpMessageType::Notification => (),
