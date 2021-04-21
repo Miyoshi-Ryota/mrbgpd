@@ -52,7 +52,7 @@ impl IpPrefix {
         for i in 0..4 {
             let mut octate = 0;
             if i < raw_data[1..].len() {
-                octate = raw_data[i];
+                octate = raw_data[i+1];
             }
             network_address.push(mask[i] & octate)
         }
