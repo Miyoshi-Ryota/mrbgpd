@@ -299,7 +299,7 @@ impl BgpUpdateMessage {
             let path_attribute_value = &raw_data[start_of_path_attrtibute_value..end_of_path_attribute_value];
             i = end_of_path_attribute_value;
 
-            let path_attribute = PathAttribute::encode(path_attribute_flag, path_attribute_type, path_attribute_length, path_attribute_value);
+            let path_attribute = PathAttribute::encode(path_attribute_flag, path_attribute_type, path_attribute_length, path_attribute_value.to_vec());
             result.push(path_attribute);
         }
         result
@@ -470,7 +470,8 @@ impl PathAttribute {
                     i += 2;
                     as_sequence.push(as_number);
                 };
-                PathAttribute::AsPath(as_sequence)
+                let as_path = AsPath::AsSequence(as_sequence);
+                PathAttribute::AsPath(as_path)
             },
             3 => {
                 let ip_addr = Ipv4Addr::new(attribute_value[0], attribute_value[1], attribute_value[2], attribute_value[3]);
