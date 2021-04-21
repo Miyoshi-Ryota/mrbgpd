@@ -334,7 +334,7 @@ impl BgpUpdateMessage {
                 25..33 => 4,
                 _ => panic!("prefix_length is wrong!"),
             };
-            let ipaddr = &raw_data[i+1..i+number_of_octates+1];
+            let ipaddr = &raw_data[i..i+number_of_octates+1];
             let ip_prefix = IpPrefix::encode(&ipaddr.to_vec());
             result.push(ip_prefix);
             i += 1 + number_of_octates;
