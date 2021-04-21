@@ -45,7 +45,6 @@ impl IpPrefix {
         let prefix_length = raw_data[0];
         let mut mask: u32 = 0;
         for i in 0..prefix_length {
-            println!("{}", prefix_length);
             mask += 2u32.pow((31-i).into());
         }
         let mask = mask.to_be_bytes().to_vec();

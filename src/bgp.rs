@@ -254,18 +254,25 @@ impl BgpUpdateMessage {
 
     pub fn encode(raw_data: &Vec<u8>) -> Self {
         let header = BgpMessageHeader::encode_from_u8(raw_data);
+        println!("header {:?}", header);
         let withdrawn_routes_length = u16::from_be_bytes(raw_data[19..21].try_into().unwrap());
+        println!("withdrawn_routes_lenght: {}", withdrawn_routes_length);
         let end_of_withdrawn_routes = 21 + withdrawn_routes_length;
         let withdrawn_routes = Self::encode_routes(&raw_data[21..end_of_withdrawn_routes.into()].to_vec());
+        println!("withdrawn_routes: {:?}", withdrawn_routes);
         let end_of_withdrawn_routes_usize = end_of_withdrawn_routes.try_into().unwrap();
         let total_path_attribute_length = u16::from_be_bytes(
             raw_data[end_of_withdrawn_routes_usize..end_of_withdrawn_routes_usize+2].try_into().unwrap());
+        println!("total_path_attribute_length: {}", total_path_attribute_length);
         let start_of_path_attributes = end_of_withdrawn_routes_usize + 2;
         let total_path_attribute_length_usize :usize = total_path_attribute_length.into();
         let end_of_path_attributes :usize  = start_of_path_attributes + total_path_attribute_length_usize;
         let path_attributes = Self::encode_path_attributes(&raw_data[start_of_path_attributes..end_of_path_attributes].to_vec());
+        println!("path attributes: {:?}", path_attributes);
         let start_of_nlri = end_of_path_attributes;
         let network_layer_reachability_information = Self::encode_routes(&raw_data[start_of_nlri.into()..].to_vec());
+        println!("network_layer_reachability_information: {:?}", path_attributes);
+
         Self {
             header,
             withdrawn_routes_length,
