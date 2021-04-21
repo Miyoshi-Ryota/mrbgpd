@@ -267,9 +267,11 @@ impl BgpUpdateMessage {
         let start_of_path_attributes = end_of_withdrawn_routes_usize + 2;
         let total_path_attribute_length_usize :usize = total_path_attribute_length.into();
         let end_of_path_attributes :usize  = start_of_path_attributes + total_path_attribute_length_usize;
+        println!("path_attributes_bytes: {:?}", raw_data[start_of_path_attributes..end_of_path_attributes].to_vec());
         let path_attributes = Self::encode_path_attributes(&raw_data[start_of_path_attributes..end_of_path_attributes].to_vec());
         println!("path attributes: {:?}", path_attributes);
         let start_of_nlri = end_of_path_attributes;
+        println!("nlri bytes: {:?}", &raw_data[start_of_nlri.into()..].to_vec());
         let network_layer_reachability_information = Self::encode_routes(&raw_data[start_of_nlri.into()..].to_vec());
         println!("network_layer_reachability_information: {:?}", path_attributes);
 
