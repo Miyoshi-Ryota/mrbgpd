@@ -1,7 +1,7 @@
 use rtnetlink::{new_connection, Error, Handle, IpVersion};
 use rtnetlink::packet::rtnl::RouteMessage;
 use futures::stream::{self, TryStreamExt};
-use std::{os::raw, slice::range, str::FromStr};
+use std::{os::raw, str::FromStr};
 use std::net::{Ipv4Addr, IpAddr};
 use std::net::AddrParseError;
 
@@ -43,12 +43,12 @@ impl IpPrefix {
     pub fn encode(raw_data: &Vec<u8>) -> Self {
         // 一個だけのVecを引数に取る。
         let prefix_length = raw_data[0];
-        let mask: u32 = 0;
+        let mut mask: u32 = 0;
         for i in 0..prefix_length {
             mask += 2u32.pow((32-i).into());
         }
         let mask = mask.to_be_bytes().to_vec();
-        let network_address = vec![];
+        let mut network_address = vec![];
         for i in 0..4 {
             let mut octate = 0;
             if i < raw_data[1..].len() {

@@ -1,4 +1,5 @@
 #![feature(str_split_as_str)]
+#![feature(exclusive_range_pattern)]
 
 pub mod bgp;
 pub mod finite_state_machine;

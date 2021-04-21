@@ -1,4 +1,4 @@
-use std::{convert::TryInto, fmt, fs::create_dir_all, io::Read, net::{Ipv4Addr, IpAddr, TcpStream}, option, str::FromStr};
+use std::{convert::TryInto, fmt, fs::create_dir_all, io::Read, net::{Ipv4Addr, IpAddr, TcpStream}, option, path::Path, str::FromStr};
 use crate::rib::{AdjRibOut, Rib};
 use crate::Config;
 use crate::finite_state_machine::{Event, EventQueue};
@@ -227,9 +227,9 @@ impl BgpUpdateMessage {
 
     pub fn decode(&self) -> Vec<u8> {
         let mut header_bytes = self.header.decode_to_u8();
-        let mut withdrawn_length = self.withdrawn_routes_length.to_be_bytes();
+        let withdrawn_length = self.withdrawn_routes_length.to_be_bytes();
         let mut withdrawn_routes: Vec<u8> = vec![]; // ToDo: Withdrawn routesに対応しておく。
-        let mut total_path_attribute_length = self.total_path_attribute_length.to_be_bytes();
+        let total_path_attribute_length = self.total_path_attribute_length.to_be_bytes();
         let mut path_attributes = vec![];
         for p in &self.path_attributes {
             let mut path_attribute_byte = p.decode().clone();
@@ -248,6 +248,87 @@ impl BgpUpdateMessage {
         result.append(&mut path_attributes);
         result.append(&mut ip_prefix);
         println!("{:?}", result);
+        result
+    }
+
+    pub fn encode(raw_data: &Vec<u8>) -> Self {
+        let header = BgpMessageHeader::encode_from_u8(raw_data);
+        let withdrawn_routes_length = u16::from_be_bytes(raw_data[19..21].try_into().unwrap());
+        let end_of_withdrawn_routes = 21 + withdrawn_routes_length;
+        let withdrawn_routes = Self::encode_routes(&raw_data[21..end_of_withdrawn_routes.into()].to_vec());
+        let end_of_withdrawn_routes_usize = end_of_withdrawn_routes.try_into().unwrap();
+        let total_path_attribute_length = u16::from_be_bytes(
+            raw_data[end_of_withdrawn_routes_usize..end_of_withdrawn_routes_usize+2].try_into().unwrap());
+        let start_of_path_attributes = end_of_withdrawn_routes_usize + 2;
+        let total_path_attribute_length_usize :usize = total_path_attribute_length.into();
+        let end_of_path_attributes :usize  = start_of_path_attributes + total_path_attribute_length_usize;
+        let path_attributes = Self::encode_path_attributes(&raw_data[start_of_path_attributes..end_of_path_attributes].to_vec());
+        let start_of_nlri = end_of_path_attributes;
+        let network_layer_reachability_information = Self::encode_routes(&raw_data[start_of_nlri.into()..].to_vec());
+        Self {
+            header,
+            withdrawn_routes_length,
+            withdrawn_routes,
+            total_path_attribute_length,
+            path_attributes,
+            network_layer_reachability_information
+        }
+    }
+
+    fn encode_path_attributes(raw_data: &Vec<u8>) -> Vec<PathAttribute> {
+        // path attributeのところだけを渡す
+        let mut result = vec![];
+        let mut i = 0;
+        while i < raw_data.len() {
+            let path_attribute_flag = raw_data[i];
+            let path_attribute_type = raw_data[i+1];
+            let number_of_octates_path_attribute_length = if 0b00010000 & path_attribute_flag == 16 {
+                2
+            } else {
+                1
+            };
+            let path_attribute_length: u16 = if 0b00010000 & path_attribute_flag == 16 {
+                u16::from_be_bytes(raw_data[i+2..i+4].try_into().unwrap())
+            } else {
+                u16::from_be_bytes([0, raw_data[i+2]])
+            };
+            let start_of_path_attrtibute_value = i + 2 + number_of_octates_path_attribute_length;
+            let path_attribute_length_usize :usize = path_attribute_length.into();
+            let end_of_path_attribute_value = start_of_path_attrtibute_value + path_attribute_length_usize;
+            let path_attribute_value = &raw_data[start_of_path_attrtibute_value..end_of_path_attribute_value];
+            i = end_of_path_attribute_value;
+
+            let path_attribute = PathAttribute::encode(path_attribute_flag, path_attribute_type, path_attribute_length, path_attribute_value);
+            result.push(path_attribute);
+        }
+        result
+    }
+
+    fn encode_routes(raw_data: &Vec<u8>) -> Vec<IpPrefix> {
+        // withdrawn_routesやnetwork_layer_reachability_informationだけを渡す
+        let mut result = vec![];
+        let mut i = 0;
+        while i < raw_data.len() {
+            let prefix_length = raw_data[i];
+            // number_of_octatesはprefix_lengthが
+            // 0 -> 0
+            // 1-8 -> 1
+            // 9-16 -> 2
+            // 17-24 -> 3
+            // 25-32 -> 4
+            let number_of_octates = match prefix_length {
+                0 => 0,
+                1..9 => 1,
+                9..17 => 2,
+                17..25 => 3,
+                25..33 => 4,
+                _ => panic!("prefix_length is wrong!"),
+            };
+            let ipaddr = &raw_data[i+1..i+number_of_octates+1];
+            let ip_prefix = IpPrefix::encode(&ipaddr.to_vec());
+            result.push(ip_prefix);
+            i += 1 + number_of_octates;
+        }
         result
     }
 }
@@ -336,6 +417,7 @@ enum PathAttribute {
     LocalPref, // EBGPではつかわない
     AtomicAggregate, // 実装は後でで良い
     Aggregator, // 実装は後でで良い
+    DontKnow(Vec<u8>), // 不明なやつ
 }
 
 impl PathAttribute {
@@ -366,6 +448,34 @@ impl PathAttribute {
                 result
             },
             _ => vec![],
+        }
+    }
+    pub fn encode(attribute_flag: u8, attribute_type: u8, attribute_length: u16, attribute_value: Vec<u8>) -> Self {
+        match attribute_type {
+            1 => {
+                let origin = match attribute_type {
+                    0 => Origin::Igp,
+                    1 => Origin::Egp,
+                    2 => Origin::Incompleted,
+                    _ => panic!(),
+                };
+                PathAttribute::Origin(origin)
+            },
+            2 => {
+                let mut as_sequence = vec![];
+                let mut i = 0;
+                while i < attribute_value.len() {
+                    let as_number = u16::from_be_bytes(attribute_value[i..i+2].try_into().unwrap());
+                    i += 2;
+                    as_sequence.push(as_number);
+                };
+                PathAttribute::AsPath(as_sequence)
+            },
+            3 => {
+                let ip_addr = Ipv4Addr::new(attribute_value[0], attribute_value[1], attribute_value[2], attribute_value[3]);
+                PathAttribute::NextHop(ip_addr)
+            },
+            _ => PathAttribute::DontKnow(attribute_value)
         }
     }
 }
@@ -466,7 +576,11 @@ pub fn bgp_packet_handler(raw_data: &Vec<u8>, event_queue: &mut EventQueue) {
                     // ToDo: else error open message ni taiou
                     // event_queue.push(Event::BgpOpenMsgErr);
                 },
-                BgpMessageType::Update => (),
+                BgpMessageType::Update => {
+                    let bgp_message = BgpUpdateMessage::encode(raw_data);
+                    // packet_bufferに積むかも？
+                    event_queue.push(Event::UpdateMsg);
+                },
                 BgpMessageType::Notification => (),
                 BgpMessageType::Keepalive => {
                     event_queue.push(Event::KeepAliveMsg);
