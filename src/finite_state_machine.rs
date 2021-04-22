@@ -1,4 +1,4 @@
-use crate::{Config, Mode, bgp::BgpKeepaliveMessage, bgp::BgpOpenMessage, bgp::BgpUpdateMessage};
+use crate::{Config, Mode, bgp::BgpKeepaliveMessage, bgp::BgpOpenMessage, bgp::BgpUpdateMessage, bgp::BgpMessage};
 use std::{alloc::System, time::{Duration, SystemTime}};
 use std::net;
 use std::{thread, time};
@@ -26,26 +26,30 @@ pub struct fsm {
     pub tcp_connection: Option<net::TcpStream>,
     packet_buffer: [u8; 1024],
     pub event_queue: EventQueue,
+    pub packet_queue: PacketQueue,
     loc_rib: LocRib,
     adj_rib_out: AdjRibOut,
 }
 
-pub struct EventQueue {
-    data: Vec<Event>,
+pub struct Queue<T> {
+    data: Vec<T>,
 }
 
-impl EventQueue {
+pub type EventQueue = Queue<Event>;
+pub type PacketQueue = Queue<BgpMessage>;
+
+impl<T> Queue<T> {
     pub fn new() -> Self {
         Self {
             data: vec![]
         }
     }
 
-    pub fn push(&mut self, event: Event) {
-        self.data.push(event);
+    pub fn push(&mut self, d: T) {
+        self.data.push(d);
     }
 
-    pub fn pop(&mut self) -> Option<Event> {
+    pub fn pop(&mut self) -> Option<T> {
         self.data.pop()
     }
 }
@@ -57,6 +61,7 @@ impl fsm {
         let tcp_connection = None;
         let event_queue = EventQueue::new();
         let packet_buffer = [0u8; 1024];
+        let packet_queue = PacketQueue::new();
         let loc_rib = LocRib::new(vec![]);
         let adj_rib_out = LocRib::new(vec![]);
 
@@ -67,6 +72,7 @@ impl fsm {
             tcp_connection,
             packet_buffer,
             event_queue,
+            packet_queue,
             loc_rib,
             adj_rib_out,
         }

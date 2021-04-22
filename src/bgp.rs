@@ -1,7 +1,7 @@
 use std::{convert::TryInto, fmt, fs::create_dir_all, io::Read, net::{Ipv4Addr, IpAddr, TcpStream}, option, path::Path, str::FromStr};
 use crate::rib::{AdjRibOut, Rib};
 use crate::Config;
-use crate::finite_state_machine::{Event, EventQueue};
+use crate::finite_state_machine::{Event, EventQueue, PacketQueue};
 use crate::routing::IpPrefix;
 
 enum BGPVersion{
@@ -506,7 +506,7 @@ impl BgpKeepaliveMessage {
     }
 }
 
-struct BgpNotificationMessage{
+pub struct BgpNotificationMessage{
     header: BgpMessageHeader,
     error_code: BgpErrorCode,
     data: Vec<u8>, // とりあえず
@@ -568,14 +568,14 @@ impl AutonomousSystemNumber {
     }
 }
 
-enum BgpMessage {
+pub enum BgpMessage {
     Open(BgpOpenMessage),
     Update(BgpUpdateMessage),
     Notification(BgpNotificationMessage),
     Keepalive(BgpKeepaliveMessage),
 }
 
-pub fn bgp_packet_handler(raw_data: &Vec<u8>, event_queue: &mut EventQueue) {
+pub fn bgp_packet_handler(raw_data: &Vec<u8>, event_queue: &mut EventQueue, packet_queue: &mut PacketQueue) {
     let bgp_message_type = identify_what_kind_of_bgp_packet_is(raw_data);
     match bgp_message_type {
         Ok(t) => {
@@ -590,7 +590,7 @@ pub fn bgp_packet_handler(raw_data: &Vec<u8>, event_queue: &mut EventQueue) {
                 BgpMessageType::Update => {
                     let bgp_message = BgpUpdateMessage::encode(raw_data);
                     // packet_bufferに積むかも？
-                    println!("{:?}", bgp_message);
+                    packet_queue.push(BgpMessage::Update(bgp_message));
                     event_queue.push(Event::UpdateMsg);
                 },
                 BgpMessageType::Notification => (),
