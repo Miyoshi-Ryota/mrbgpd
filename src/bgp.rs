@@ -463,7 +463,7 @@ impl PathAttribute {
     pub fn encode(attribute_flag: u8, attribute_type: u8, attribute_length: u16, attribute_value: Vec<u8>) -> Self {
         match attribute_type {
             1 => {
-                let origin = match attribute_type {
+                let origin = match attribute_value[0] {
                     0 => Origin::Igp,
                     1 => Origin::Egp,
                     2 => Origin::Incompleted,
@@ -473,7 +473,7 @@ impl PathAttribute {
             },
             2 => {
                 let mut as_sequence = vec![];
-                let mut i = 0;
+                let mut i = 2;
                 while i < attribute_value.len() {
                     let as_number = u16::from_be_bytes(attribute_value[i..i+2].try_into().unwrap());
                     i += 2;
