@@ -4,7 +4,7 @@ use std::net;
 use std::{thread, time};
 use net::{TcpListener, TcpStream};
 use std::io::Write;
-use crate::rib::{LocRib, AdjRibOut};
+use crate::rib::{LocRib, AdjRibOut, AdjRibIn};
 use crate::routing::lookup_network_route;
 
 
@@ -29,6 +29,7 @@ pub struct fsm {
     pub packet_queue: PacketQueue,
     loc_rib: LocRib,
     adj_rib_out: AdjRibOut,
+    adj_rib_in: AdjRibIn,
 }
 
 pub struct Queue<T> {
@@ -62,8 +63,9 @@ impl fsm {
         let event_queue = EventQueue::new();
         let packet_buffer = [0u8; 1024];
         let packet_queue = PacketQueue::new();
+        let adj_rib_in = AdjRibIn::new(vec![]);
         let loc_rib = LocRib::new(vec![]);
-        let adj_rib_out = LocRib::new(vec![]);
+        let adj_rib_out = AdjRibOut::new(vec![]);
 
         Self {
             config,
@@ -73,6 +75,7 @@ impl fsm {
             packet_buffer,
             event_queue,
             packet_queue,
+            adj_rib_in,
             loc_rib,
             adj_rib_out,
         }
@@ -434,7 +437,7 @@ impl fsm {
                         self.session_attribute.hold_timer = SystemTime::now();
                         self.session_attribute.state = State::Established;
                         let mut routes = lookup_network_route(&self.config.advertisement_network).await.unwrap();
-                        self.loc_rib.add(&mut routes);
+                        self.loc_rib.add_from_route_message(&mut routes);
                         self.event_queue.push(Event::LocRibChanged);
                     },
                     _ => {
@@ -534,6 +537,11 @@ impl fsm {
                         //   - restarts its HoldTimer, if the negotiated HoldTime value is
                         //     non-zero, and
                         //   - remains in the Established state.
+                        let bgp_update_message = match self.packet_queue.pop().unwrap() {
+                            BgpMessage::Update(d) => d,
+                            _ => panic!(),
+                        };
+                        println!("{:?}", bgp_update_message);
                     },
                     &Event::UpdateMsgErr => {
                         // If the local system receives an UPDATE message, and the UPDATE

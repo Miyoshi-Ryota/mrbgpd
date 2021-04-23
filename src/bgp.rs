@@ -1,8 +1,9 @@
 use std::{convert::TryInto, fmt, fs::create_dir_all, io::Read, net::{Ipv4Addr, IpAddr, TcpStream}, option, path::Path, str::FromStr};
-use crate::rib::{AdjRibOut, Rib};
+use crate::rib::{AdjRibOut, LocRib, AdjRibIn};
 use crate::Config;
 use crate::finite_state_machine::{Event, EventQueue, PacketQueue};
 use crate::routing::IpPrefix;
+use rtnetlink::packet::RouteMessage;
 
 enum BGPVersion{
     V1,
@@ -187,13 +188,10 @@ impl BgpUpdateMessage {
         let advertise_route = adj_rib_out.get_new_route();
         let mut advertise_route_ip_prefixes = vec![];
         for entry in advertise_route {
-            if let Some(ip_prefix) = entry.destination_prefix() {
-                if let IpAddr::V4(ipaddr) = ip_prefix.0 {
-                    let ip_prefix = IpPrefix::new(ipaddr, ip_prefix.1);
-                    advertise_route_ip_prefixes.push(ip_prefix);
-                }
+            let ip_prefix = entry.destnation_address;
+            advertise_route_ip_prefixes.push(ip_prefix);
             }
-        }
+
         let origin = PathAttribute::Origin(Origin::Igp);
         let as_path = PathAttribute::AsPath(AsPath::AsSequence(vec![config.as_number.0]));
         let next_hop = PathAttribute::NextHop(config.my_ip_addr);
@@ -343,11 +341,6 @@ impl BgpUpdateMessage {
     }
 }
 
-struct RoutingInformationEntry {
-    prefix: IpPrefix,
-    destination_address: Ipv4Addr,
-    output_interface: Interface
-}
 
 struct Interface;
 
