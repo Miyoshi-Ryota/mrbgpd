@@ -13,25 +13,25 @@ impl Rib {
 
     pub fn add_from_route_message(&mut self, routing_information: &mut Vec<RouteMessage>) {
         for rm in routing_information {
-            let gateway = match rm.gateway().unwrap() {
-                IpAddr::V4(ip) => ip,
-                _ => panic!(),
-            };
-            let destnation_address = match rm.destination_prefix() {
-                Some((ip, prefix)) => {
-                    if let IpAddr::V4(ip) = ip {
-                        IpPrefix::new(ip, prefix)
-                    } else {
-                        panic!();
-                    }
-                },
-                _ => panic!(),
-            };
+            if let Some(IpAddr::V4(gateway)) = rm.gateway() {
 
-            let routing_information_entry = RoutingInformationEntry::new(
-                gateway, destnation_address,
-            );
-            self.0.push(routing_information_entry)
+                let destnation_address = match rm.destination_prefix() {
+                    Some((ip, prefix)) => {
+                        if let IpAddr::V4(ip) = ip {
+                            IpPrefix::new(ip, prefix)
+                        } else {
+                            panic!();
+                        }
+                    },
+                    _ => panic!(),
+                };
+
+                let routing_information_entry = RoutingInformationEntry::new(
+                    gateway, destnation_address,
+                );
+
+                self.0.push(routing_information_entry)
+            }
         }
     }
 
