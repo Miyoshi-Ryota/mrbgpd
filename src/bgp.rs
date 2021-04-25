@@ -178,8 +178,8 @@ pub struct BgpUpdateMessage {
     withdrawn_routes_length: u16,
     withdrawn_routes: Vec<IpPrefix>,
     total_path_attribute_length: u16,
-    path_attributes: Vec<PathAttribute>,
-    network_layer_reachability_information: Vec<IpPrefix>,
+    pub path_attributes: Vec<PathAttribute>,
+    pub network_layer_reachability_information: Vec<IpPrefix>,
 }
 
 impl BgpUpdateMessage {
@@ -399,8 +399,9 @@ impl AsPath {
             },
         }
     }
-}#[derive(Debug)]
-enum PathAttribute {
+}
+#[derive(Debug)]
+pub enum PathAttribute {
     // PathAttributeのバイト列の表現は以下の通り
     // (<PathAttribute Type>, <attribute length>, <attribute value>)
     // <PathAttribute Type>: (<attr flags>: u8, <attr type code>: u8)

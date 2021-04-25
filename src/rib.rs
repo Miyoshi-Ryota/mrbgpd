@@ -1,7 +1,7 @@
 use rtnetlink::packet::RouteMessage;
 use std::net::Ipv4Addr;
 use std::net::IpAddr;
-use crate::routing::{self, IpPrefix};
+use crate::{bgp::{BgpUpdateMessage, PathAttribute}, routing::{self, IpPrefix}};
 
 #[derive(Clone)]
 pub struct Rib(pub Vec<RoutingInformationEntry>);
@@ -54,6 +54,22 @@ impl Rib {
         }
         self.add_from_route_message(&mut filtered_routing_information)
     }
+
+    pub fn add_from_update_message(&mut self, update_message: BgpUpdateMessage) {
+        let mut nexthop = Ipv4Addr::new(0, 0, 0, 0);
+        for path_attribute in &update_message.path_attributes {
+            match path_attribute {
+                &PathAttribute::NextHop(ip_addr) => {
+                    nexthop = ip_addr;
+                },
+                _ => (),
+            }
+        }
+        let mut routing_information: Vec<RoutingInformationEntry> = update_message.network_layer_reachability_information.into_iter().map(
+            |dest| RoutingInformationEntry::new(nexthop, dest)).collect();
+        self.add(&mut routing_information);
+    }
+
 
     pub fn get_new_route(&self) -> Vec<RoutingInformationEntry> {
         self.0.clone()

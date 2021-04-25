@@ -6,7 +6,7 @@ use net::{TcpListener, TcpStream};
 use std::io::Write;
 use crate::rib::{LocRib, AdjRibOut, AdjRibIn};
 use crate::routing::lookup_network_route;
-
+use crate::bgp::{PathAttribute};
 
 pub struct SessionAttribute {
     state: State,
@@ -541,7 +541,8 @@ impl fsm {
                             BgpMessage::Update(d) => d,
                             _ => panic!(),
                         };
-                        println!("{:?}", bgp_update_message);
+                        self.adj_rib_in.add_from_update_message(bgp_update_message);
+                        self.event_queue.push(Event::AdjRibInChanged);
                     },
                     &Event::UpdateMsgErr => {
                         // If the local system receives an UPDATE message, and the UPDATE
@@ -556,6 +557,9 @@ impl fsm {
                         //   - (optionally) performs peer oscillation damping if the
                         //     DampPeerOscillations attribute is set to TRUE, and
                         //   - changes its state to Idle.
+                    },
+                    &Event::AdjRibInChanged => {
+
                     },
                     &Event::LocRibChanged => {
                         // Kick Phase 3 (LocRib => Adj-RIB-Out);
@@ -629,6 +633,7 @@ pub enum Event {
     UpdateMsg, // Event 27
     UpdateMsgErr, // Event 28
     // Original (There is no event in RFC)
+    AdjRibInChanged,
     LocRibChanged,
     AdjRibOutChanged,
 }
