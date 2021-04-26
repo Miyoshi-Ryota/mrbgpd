@@ -1,9 +1,10 @@
-use rtnetlink::{new_connection, Error, Handle, IpVersion};
+use rtnetlink::{Error, Handle, IpVersion, RouteAddRequest, new_connection};
 use rtnetlink::packet::rtnl::RouteMessage;
 use futures::stream::{self, TryStreamExt};
 use std::{os::raw, str::FromStr};
 use std::net::{Ipv4Addr, IpAddr};
 use std::net::AddrParseError;
+use crate::rib::LocRib;
 
 #[derive(Debug, Clone, Copy)]
 pub struct IpPrefix {
@@ -135,6 +136,19 @@ pub async fn get_all_ip_v4_routes() -> Result<Vec<RouteMessage>, Error> {
         result.push(route);
     }
     Ok(result)
+}
+
+pub async fn write_ip_v4_route(loc_rib: &LocRib) {
+    let (connection, handle, _) = new_connection().unwrap();
+    tokio::spawn(connection);
+    for entry in &loc_rib.0 {
+        let mut add_request = handle.route().add().v4();
+        let destnation = &entry.destnation_address;
+        let gateway = &entry.nexthop;
+        let ret = add_request.protocol(3).destination_prefix(destnation.network_address.clone(), destnation.prefix_length.clone()).gateway(gateway.clone()).execute().await;
+        ret.unwrap();
+    }
+    ()
 }
 
 pub async fn lookup_network_route(ip_prefix: &IpPrefix) -> Result<Vec<RouteMessage>, Error> {

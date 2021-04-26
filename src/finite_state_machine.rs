@@ -1,4 +1,4 @@
-use crate::{Config, Mode, bgp::BgpKeepaliveMessage, bgp::BgpOpenMessage, bgp::BgpUpdateMessage, bgp::BgpMessage};
+use crate::{Config, Mode, bgp::BgpKeepaliveMessage, bgp::BgpMessage, bgp::BgpOpenMessage, bgp::BgpUpdateMessage, routing::write_ip_v4_route};
 use std::{alloc::System, time::{Duration, SystemTime}};
 use std::net;
 use std::{thread, time};
@@ -7,6 +7,7 @@ use std::io::Write;
 use crate::rib::{LocRib, AdjRibOut, AdjRibIn};
 use crate::routing::lookup_network_route;
 use crate::bgp::{PathAttribute};
+use rtnetlink::RouteAddRequest;
 
 pub struct SessionAttribute {
     state: State,
@@ -565,6 +566,8 @@ impl fsm {
                         let mut adj_rib_in = self.adj_rib_in.clone();
                         self.loc_rib.change_state_of_all_routing_information_to_unchanged();
                         self.loc_rib.add(&mut adj_rib_in.0);
+                        // Routing Table に書き込む処理を追加する
+                        write_ip_v4_route(&self.loc_rib).await;
                         self.event_queue.push(Event::LocRibChanged);
                     },
                     &Event::LocRibChanged => {
