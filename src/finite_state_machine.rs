@@ -85,6 +85,7 @@ impl fsm {
         // ToDo: nexthopが存在するかなどのチェックや、
         // ルートが消えることのチェックを行っていない。
         let mut loc_rib = self.loc_rib.clone();
+        self.adj_rib_out.change_state_of_all_routing_information_to_unchanged();
         self.adj_rib_out.add(&mut loc_rib.0);
     }
 
@@ -559,7 +560,12 @@ impl fsm {
                         //   - changes its state to Idle.
                     },
                     &Event::AdjRibInChanged => {
-
+                        // Nexthopがいないのをfilterするだけで良い
+                        // Adj-Rib-In => LocRib;
+                        let mut adj_rib_in = self.adj_rib_in.clone();
+                        self.loc_rib.change_state_of_all_routing_information_to_unchanged();
+                        self.loc_rib.add(&mut adj_rib_in.0);
+                        self.event_queue.push(Event::LocRibChanged);
                     },
                     &Event::LocRibChanged => {
                         // Kick Phase 3 (LocRib => Adj-RIB-Out);

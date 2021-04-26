@@ -4,6 +4,7 @@ use crate::Config;
 use crate::finite_state_machine::{Event, EventQueue, PacketQueue};
 use crate::routing::IpPrefix;
 use rtnetlink::packet::RouteMessage;
+use crate::rib::RoutingInformationStatus;
 
 enum BGPVersion{
     V1,
@@ -188,9 +189,11 @@ impl BgpUpdateMessage {
         let advertise_route = adj_rib_out.get_new_route();
         let mut advertise_route_ip_prefixes = vec![];
         for entry in advertise_route {
-            let ip_prefix = entry.destnation_address;
-            advertise_route_ip_prefixes.push(ip_prefix);
+            if entry.status == RoutingInformationStatus::Updated{
+                let ip_prefix = entry.destnation_address;
+                advertise_route_ip_prefixes.push(ip_prefix);
             }
+        }
 
         let origin = PathAttribute::Origin(Origin::Igp);
         let as_path = PathAttribute::AsPath(AsPath::AsSequence(vec![config.as_number.0]));
@@ -349,7 +352,7 @@ fn lookup_routing_table(network: &IpPrefix) -> (Ipv4Addr, Interface) {
     (Ipv4Addr::from_str("192.168.2.5").unwrap(), Interface)
 }
 #[derive(Debug)]
-enum Origin {
+pub enum Origin {
     Igp,
     Egp,
     Incompleted,
@@ -365,7 +368,7 @@ impl Origin {
     }
 }
 #[derive(Debug)]
-enum AsPath {
+pub enum AsPath {
     AsSet(Vec<u16>),
     AsSequence(Vec<u16>),
 }

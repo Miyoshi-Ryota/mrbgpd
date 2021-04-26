@@ -27,7 +27,7 @@ impl Rib {
                 };
 
                 let routing_information_entry = RoutingInformationEntry::new(
-                    gateway, destnation_address,
+                    gateway, destnation_address, RoutingInformationStatus::Updated,
                 );
 
                 self.0.push(routing_information_entry)
@@ -37,6 +37,12 @@ impl Rib {
 
     pub fn add(&mut self, routing_information: &mut Vec<RoutingInformationEntry>) {
         self.0.append(routing_information)
+    }
+
+    pub fn change_state_of_all_routing_information_to_unchanged(&mut self) {
+        for entry in &mut self.0 {
+            entry.status = RoutingInformationStatus::UnChanged;
+        }
     }
 
     pub fn add_route_filtered_by_network_command
@@ -66,7 +72,7 @@ impl Rib {
             }
         }
         let mut routing_information: Vec<RoutingInformationEntry> = update_message.network_layer_reachability_information.into_iter().map(
-            |dest| RoutingInformationEntry::new(nexthop, dest)).collect();
+            |dest| RoutingInformationEntry::new(nexthop, dest, RoutingInformationStatus::Updated)).collect();
         self.add(&mut routing_information);
     }
 
@@ -83,12 +89,19 @@ impl Rib {
 pub struct RoutingInformationEntry {
     pub nexthop: Ipv4Addr,
     pub destnation_address: IpPrefix,
+    pub status: RoutingInformationStatus,
+}
+#[derive(Clone, Copy, std::cmp::PartialEq)]
+pub enum RoutingInformationStatus {
+    Withdrawn,
+    Updated,
+    UnChanged,
 }
 
 impl RoutingInformationEntry {
 
-    pub fn new(nexthop: Ipv4Addr, destnation_address: IpPrefix) -> Self {
-        Self {nexthop, destnation_address}
+    pub fn new(nexthop: Ipv4Addr, destnation_address: IpPrefix, status: RoutingInformationStatus) -> Self {
+        Self {nexthop, destnation_address, status}
     }
 }
 
