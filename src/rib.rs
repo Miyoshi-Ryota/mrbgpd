@@ -2,6 +2,7 @@ use rtnetlink::packet::RouteMessage;
 use std::net::Ipv4Addr;
 use std::net::IpAddr;
 use crate::{bgp::{BgpUpdateMessage, PathAttribute}, routing::{self, IpPrefix}};
+use std::cmp::PartialEq;
 
 #[derive(Clone)]
 pub struct Rib(pub Vec<RoutingInformationEntry>);
@@ -30,13 +31,30 @@ impl Rib {
                     gateway, destnation_address, RoutingInformationStatus::Updated,
                 );
 
-                self.0.push(routing_information_entry)
+                self.add_if_needed(routing_information_entry)
             }
         }
     }
 
-    pub fn add(&mut self, routing_information: &mut Vec<RoutingInformationEntry>) {
-        self.0.append(routing_information)
+    pub fn add(&mut self, routing_information: Vec<RoutingInformationEntry>) {
+        for routing in routing_information {
+            self.add_if_needed(routing);
+        }
+    }
+
+    fn add_if_needed(&mut self, one_route: RoutingInformationEntry) {
+        if !self.0.contains(&one_route) {
+            self.0.push(one_route);
+        }
+    }
+
+    pub fn does_have_new_route(&self) -> bool {
+        for route in &self.0 {
+            if !(route.status == RoutingInformationStatus::UnChanged) {
+                return true
+            }
+        };
+        return false
     }
 
     pub fn change_state_of_all_routing_information_to_unchanged(&mut self) {
@@ -71,9 +89,9 @@ impl Rib {
                 _ => (),
             }
         }
-        let mut routing_information: Vec<RoutingInformationEntry> = update_message.network_layer_reachability_information.into_iter().map(
+        let routing_information: Vec<RoutingInformationEntry> = update_message.network_layer_reachability_information.into_iter().map(
             |dest| RoutingInformationEntry::new(nexthop, dest, RoutingInformationStatus::Updated)).collect();
-        self.add(&mut routing_information);
+        self.add(routing_information);
     }
 
 
@@ -91,6 +109,14 @@ pub struct RoutingInformationEntry {
     pub destnation_address: IpPrefix,
     pub status: RoutingInformationStatus,
 }
+
+impl PartialEq for RoutingInformationEntry {
+    fn eq(&self, other: &RoutingInformationEntry) -> bool {
+        self.nexthop == other.nexthop
+        && self.destnation_address == other.destnation_address
+    }
+}
+
 #[derive(Clone, Copy, std::cmp::PartialEq)]
 pub enum RoutingInformationStatus {
     Withdrawn,

@@ -6,7 +6,7 @@ use std::net::{Ipv4Addr, IpAddr};
 use std::net::AddrParseError;
 use crate::rib::LocRib;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IpPrefix {
     network_address: Ipv4Addr, // ToDo: 正確にはネットワークアドレス的なやつなのでipv4addrを使うのは不適切
     prefix_length: u8,
