@@ -16,27 +16,25 @@ impl Rib {
         println!("now in Rib.add_from_route_message {:?}", routing_information);
         for rm in routing_information {
             println!("the route gateway: {:?}", rm.gateway());
-            if let Some(IpAddr::V4(gateway)) = rm.gateway() {
-
-                let destnation_address = match rm.destination_prefix() {
-                    Some((ip, prefix)) => {
-                        if let IpAddr::V4(ip) = ip {
-                            IpPrefix::new(ip, prefix)
-                        } else {
-                            panic!();
-                        }
-                    },
-                    _ => panic!(),
+            if let Some((ip, prefix)) = rm.destination_prefix() {
+                let destination_address = if let IpAddr::V4(ip) = ip {
+                    IpPrefix::new(ip, prefix)
+                } else {
+                    panic!();
                 };
-
+                let gateway =  match rm.gateway() {
+                    Some(IpAddr::V4(gateway)) => gateway,
+                    _ => Ipv4Addr::new(0, 0, 0, 0),
+                };
                 let routing_information_entry = RoutingInformationEntry::new(
-                    gateway, destnation_address, RoutingInformationStatus::Updated,
+                    gateway, destination_address, RoutingInformationStatus::Updated,
                 );
                 println!("Add from route message. Try to add route: {:?}", routing_information_entry);
                 self.add_if_needed(routing_information_entry)
             }
         }
     }
+
 
     pub fn add(&mut self, routing_information: Vec<RoutingInformationEntry>) {
         for routing in routing_information {
