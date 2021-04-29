@@ -85,8 +85,11 @@ impl fsm {
     fn phase3_disseminate_route(&mut self) {
         // ToDo: nexthopが存在するかなどのチェックや、
         // ルートが消えることのチェックを行っていない。
-        let loc_rib = self.loc_rib.clone();
+        let mut loc_rib = self.loc_rib.clone();
         self.adj_rib_out.change_state_of_all_routing_information_to_unchanged();
+        for entry in &mut loc_rib.0 {
+            entry.add_as_path(self.config.as_number.0);
+        }
         self.adj_rib_out.add(loc_rib.0);
     }
 
@@ -441,7 +444,7 @@ impl fsm {
                         self.session_attribute.state = State::Established;
                         let mut routes = lookup_network_route(&self.config.advertisement_network).await.unwrap();
                         let origin = PathAttribute::Origin(Origin::Igp);
-                        let as_path = PathAttribute::AsPath(AsPath::AsSequence(vec![self.config.as_number.0]));
+                        let as_path = PathAttribute::AsPath(AsPath::AsSequence(vec![]));
                         let next_hop = PathAttribute::NextHop(self.config.my_ip_addr);
                         let path_attributes = vec![origin, as_path, next_hop];
 

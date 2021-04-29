@@ -131,6 +131,23 @@ impl RoutingInformationEntry {
         }
         panic!();
     }
+
+    pub fn add_as_path(&mut self, as_path_v: u16) {
+        for p in &mut self.path_attributes {
+            match p {
+                PathAttribute::AsPath(as_path) => {
+                    match as_path {
+                        AsPath::AsSequence(as_path) => {
+                            as_path.push(as_path_v);
+                        },
+                        AsPath::AsSet(as_path) => {
+                            as_path.push(as_path_v);
+                        }
+                   };
+                }
+            }
+        }
+    }
 }
 
 
