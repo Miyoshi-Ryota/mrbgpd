@@ -548,7 +548,7 @@ impl fsm {
                             BgpMessage::Update(d) => d,
                             _ => panic!(),
                         };
-                        self.adj_rib_in.add_from_update_message(bgp_update_message);
+                        self.adj_rib_in.add_from_update_message(bgp_update_message, &self.config.as_number);
                         if self.adj_rib_in.does_have_new_route() {
                             self.event_queue.push(Event::AdjRibInChanged);
                         }

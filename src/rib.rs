@@ -1,7 +1,7 @@
 use rtnetlink::packet::RouteMessage;
 use std::net::Ipv4Addr;
 use std::net::IpAddr;
-use crate::{bgp::{BgpUpdateMessage, PathAttribute}, routing::{self, IpPrefix}};
+use crate::{bgp::{AutonomousSystemNumber, BgpUpdateMessage, PathAttribute}, routing::{self, IpPrefix}};
 use std::cmp::PartialEq;
 
 #[derive(Clone, Debug)]
@@ -82,13 +82,18 @@ impl Rib {
         self.add_from_route_message(&mut filtered_routing_information)
     }
 
-    pub fn add_from_update_message(&mut self, update_message: BgpUpdateMessage) {
+    pub fn add_from_update_message(&mut self, update_message: BgpUpdateMessage, my_as_number: &AutonomousSystemNumber) {
         let mut nexthop = Ipv4Addr::new(0, 0, 0, 0);
         for path_attribute in &update_message.path_attributes {
             match path_attribute {
                 &PathAttribute::NextHop(ip_addr) => {
                     nexthop = ip_addr;
                 },
+                PathAttribute::AsPath(as_path) => {
+                    if as_path.does_have_the_as_number(my_as_number) {
+                        return ();
+                    }
+                }
                 _ => (),
             }
         }

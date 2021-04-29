@@ -402,6 +402,12 @@ impl AsPath {
             },
         }
     }
+    pub fn does_have_the_as_number(&self, as_number: &AutonomousSystemNumber) -> bool {
+        match &self {
+            &AsPath::AsSequence(as_sec) => as_sec.contains(&as_number.0),
+            &AsPath::AsSet(as_set) => as_set.contains(&as_number.0),
+        }
+    }
 }
 #[derive(Debug)]
 pub enum PathAttribute {
