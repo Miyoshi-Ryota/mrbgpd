@@ -45,6 +45,9 @@ impl Rib {
     fn add_if_needed(&mut self, one_route: RoutingInformationEntry) {
         if !self.0.contains(&one_route) {
             self.0.push(one_route);
+        } else {
+            println!("the rib already have had the route, {:?}.", one_route);
+            println!("and now rib is {:?}", self.0);
         }
     }
 
