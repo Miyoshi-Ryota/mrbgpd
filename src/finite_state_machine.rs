@@ -587,8 +587,8 @@ impl fsm {
                         }
                         self.loc_rib.add(adj_rib_in);
                         // Routing Table に書き込む処理を追加する
-                        write_ip_v4_route(&self.loc_rib).await;
                         if self.loc_rib.does_have_new_route() {
+                            write_ip_v4_route(&self.loc_rib).await;
                             self.event_queue.push(Event::LocRibChanged);
                         }
                     },
