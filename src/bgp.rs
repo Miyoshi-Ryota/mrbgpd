@@ -185,7 +185,7 @@ pub struct BgpUpdateMessage {
 
 impl BgpUpdateMessage {
     pub fn is_created_from_adj_rib_out(adj_rib_out: &AdjRibOut, config: &Config) -> Self {
-        // ToDo: 実装する
+        // ToDo: adj_rib_outはpath_attributeが同じやつだけにフィルターしたものにしなければならない
         let advertise_route = adj_rib_out.get_new_route();
         let mut advertise_route_ip_prefixes = vec![];
         for entry in advertise_route {
@@ -194,11 +194,7 @@ impl BgpUpdateMessage {
                 advertise_route_ip_prefixes.push(ip_prefix);
             }
         }
-
-        let origin = PathAttribute::Origin(Origin::Igp);
-        let as_path = PathAttribute::AsPath(AsPath::AsSequence(vec![config.as_number.0]));
-        let next_hop = PathAttribute::NextHop(config.my_ip_addr);
-        let path_attributes = vec![origin, as_path, next_hop];
+        let path_attributes = adj_rib_out.0[0].path_attributes.clone();
         let total_path_attributes_length: usize = path_attributes.iter().map(|p|p.decode().len()).sum();
         let total_path_attributes_length = total_path_attributes_length.try_into().unwrap();
 
@@ -351,7 +347,7 @@ struct Interface;
 fn lookup_routing_table(network: &IpPrefix) -> (Ipv4Addr, Interface) {
     (Ipv4Addr::from_str("192.168.2.5").unwrap(), Interface)
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Origin {
     Igp,
     Egp,
@@ -367,7 +363,7 @@ impl Origin {
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AsPath {
     AsSet(Vec<u16>),
     AsSequence(Vec<u16>),
@@ -402,6 +398,14 @@ impl AsPath {
             },
         }
     }
+
+    pub fn get_seq(&self) -> &Vec<u16> {
+        match self {
+            AsPath::AsSequence(v) => v,
+            AsPath::AsSet(v) => v,
+        }
+    }
+
     pub fn does_have_the_as_number(&self, as_number: &AutonomousSystemNumber) -> bool {
         match &self {
             &AsPath::AsSequence(as_sec) => as_sec.contains(&as_number.0),
@@ -409,7 +413,7 @@ impl AsPath {
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PathAttribute {
     // PathAttributeのバイト列の表現は以下の通り
     // (<PathAttribute Type>, <attribute length>, <attribute value>)
@@ -563,7 +567,7 @@ enum BgpOpenMessageOptionalParameterType {
 
 struct HoldTime(u16);
 #[derive(Debug, Copy, Clone)]
-pub struct AutonomousSystemNumber(u16);
+pub struct AutonomousSystemNumber(pub u16);
 
 impl AutonomousSystemNumber {
     pub fn new(as_number: u16) -> Self {

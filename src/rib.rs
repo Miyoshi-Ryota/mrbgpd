@@ -3,6 +3,7 @@ use std::net::Ipv4Addr;
 use std::net::IpAddr;
 use crate::{bgp::{AutonomousSystemNumber, BgpUpdateMessage, PathAttribute}, routing::{self, IpPrefix}};
 use std::cmp::PartialEq;
+use crate::bgp::AsPath;
 
 #[derive(Clone, Debug)]
 pub struct Rib(pub Vec<RoutingInformationEntry>);
@@ -12,7 +13,7 @@ impl Rib {
         Rib(routing_table)
     }
 
-    pub fn add_from_route_message(&mut self, routing_information: &mut Vec<RouteMessage>) {
+    pub fn add_from_route_message(&mut self, routing_information: &mut Vec<RouteMessage>, path_attributes: Vec<PathAttribute>) {
         println!("now in Rib.add_from_route_message {:?}", routing_information);
         for rm in routing_information {
             println!("the route gateway: {:?}", rm.gateway());
@@ -27,7 +28,10 @@ impl Rib {
                     _ => Ipv4Addr::new(0, 0, 0, 0),
                 };
                 let routing_information_entry = RoutingInformationEntry::new(
-                    gateway, destination_address, RoutingInformationStatus::Updated,
+                    gateway,
+                    destination_address,
+                    RoutingInformationStatus::Updated,
+                    path_attributes.clone(),
                 );
                 println!("Add from route message. Try to add route: {:?}", routing_information_entry);
                 self.add_if_needed(routing_information_entry)
@@ -66,39 +70,18 @@ impl Rib {
         }
     }
 
-    pub fn add_route_filtered_by_network_command
-    (&mut self, routing_information: &Vec<RouteMessage>, network_command: &IpPrefix) {
-        let mut filtered_routing_information = vec![];
-        for entry in routing_information {
-            if let Some(dest) = entry.destination_prefix() {
-                if let IpAddr::V4(v) = dest.0 {
-                    let dest = IpPrefix::new(v, dest.1);
-                    if network_command.does_include(&dest) {
-                        filtered_routing_information.push(entry.clone());
-                    }
-                }
-            }
-        }
-        self.add_from_route_message(&mut filtered_routing_information)
-    }
-
     pub fn add_from_update_message(&mut self, update_message: BgpUpdateMessage, my_as_number: &AutonomousSystemNumber) {
         let mut nexthop = Ipv4Addr::new(0, 0, 0, 0);
         for path_attribute in &update_message.path_attributes {
-            match path_attribute {
+            match &path_attribute {
                 &PathAttribute::NextHop(ip_addr) => {
-                    nexthop = ip_addr;
+                    nexthop = *ip_addr;
                 },
-                PathAttribute::AsPath(as_path) => {
-                    if as_path.does_have_the_as_number(my_as_number) {
-                        return ();
-                    }
-                }
                 _ => (),
             }
         }
-        let routing_information: Vec<RoutingInformationEntry> = update_message.network_layer_reachability_information.into_iter().map(
-            |dest| RoutingInformationEntry::new(nexthop, dest, RoutingInformationStatus::Updated)).collect();
+        let routing_information: Vec<RoutingInformationEntry> = update_message.network_layer_reachability_information.iter().map(
+            |dest| RoutingInformationEntry::new(nexthop, *dest, RoutingInformationStatus::Updated, update_message.path_attributes.clone())).collect();
         self.add(routing_information);
     }
 
@@ -116,6 +99,7 @@ pub struct RoutingInformationEntry {
     pub nexthop: Ipv4Addr,
     pub destnation_address: IpPrefix,
     pub status: RoutingInformationStatus,
+    pub path_attributes: Vec<PathAttribute>,
 }
 
 impl PartialEq for RoutingInformationEntry {
@@ -134,10 +118,21 @@ pub enum RoutingInformationStatus {
 
 impl RoutingInformationEntry {
 
-    pub fn new(nexthop: Ipv4Addr, destnation_address: IpPrefix, status: RoutingInformationStatus) -> Self {
-        Self {nexthop, destnation_address, status}
+    pub fn new(nexthop: Ipv4Addr, destnation_address: IpPrefix, status: RoutingInformationStatus, path_attributes: Vec<PathAttribute>) -> Self {
+        Self {nexthop, destnation_address, status, path_attributes}
+    }
+
+    pub fn get_as_path(&self) -> &AsPath {
+        for path in &self.path_attributes {
+            match &path {
+                &PathAttribute::AsPath(as_path) => return as_path,
+                _ => (),
+            }
+        }
+        panic!();
     }
 }
+
 
 #[derive(Clone)]
 enum Protocol {

@@ -6,7 +6,7 @@ use net::{TcpListener, TcpStream};
 use std::io::Write;
 use crate::rib::{LocRib, AdjRibOut, AdjRibIn};
 use crate::routing::lookup_network_route;
-use crate::bgp::{PathAttribute};
+use crate::bgp::{PathAttribute, Origin, AsPath};
 use rtnetlink::RouteAddRequest;
 
 pub struct SessionAttribute {
@@ -440,7 +440,12 @@ impl fsm {
                         self.session_attribute.hold_timer = SystemTime::now();
                         self.session_attribute.state = State::Established;
                         let mut routes = lookup_network_route(&self.config.advertisement_network).await.unwrap();
-                        self.loc_rib.add_from_route_message(&mut routes);
+                        let origin = PathAttribute::Origin(Origin::Igp);
+                        let as_path = PathAttribute::AsPath(AsPath::AsSequence(vec![self.config.as_number.0]));
+                        let next_hop = PathAttribute::NextHop(self.config.my_ip_addr);
+                        let path_attributes = vec![origin, as_path, next_hop];
+
+                        self.loc_rib.add_from_route_message(&mut routes, path_attributes);
                         if self.loc_rib.does_have_new_route() {
                             self.event_queue.push(Event::LocRibChanged);
                         } else {
@@ -570,9 +575,14 @@ impl fsm {
                     &Event::AdjRibInChanged => {
                         // Nexthopがいないのをfilterするだけで良い
                         // Adj-Rib-In => LocRib;
-                        let adj_rib_in = self.adj_rib_in.clone();
+                        let mut adj_rib_in = vec![];
                         self.loc_rib.change_state_of_all_routing_information_to_unchanged();
-                        self.loc_rib.add(adj_rib_in.0);
+                        for entry in self.adj_rib_in.0.clone() {
+                            if entry.get_as_path().get_seq().contains(&self.config.as_number.0) {
+                                adj_rib_in.push(entry);
+                            }
+                        }
+                        self.loc_rib.add(adj_rib_in);
                         // Routing Table に書き込む処理を追加する
                         write_ip_v4_route(&self.loc_rib).await;
                         if self.loc_rib.does_have_new_route() {
