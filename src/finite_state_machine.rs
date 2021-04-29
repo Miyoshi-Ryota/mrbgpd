@@ -581,10 +581,8 @@ impl fsm {
                         let mut adj_rib_in = vec![];
                         self.loc_rib.change_state_of_all_routing_information_to_unchanged();
                         for entry in self.adj_rib_in.0.clone() {
-                            if entry.get_as_path().get_seq().contains(&self.config.as_number.0) {
+                            if !entry.get_as_path().get_seq().contains(&self.config.as_number.0) {
                                 adj_rib_in.push(entry);
-                            } else {
-                                println!("this entry {:?} is ignored", entry);
                             }
                         }
                         self.loc_rib.add(adj_rib_in);
