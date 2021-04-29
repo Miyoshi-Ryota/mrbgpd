@@ -30,7 +30,7 @@ impl Rib {
                 let routing_information_entry = RoutingInformationEntry::new(
                     gateway, destnation_address, RoutingInformationStatus::Updated,
                 );
-
+                println!("Add from route message. Try to add route: {:?}", routing_information_entry);
                 self.add_if_needed(routing_information_entry)
             }
         }
