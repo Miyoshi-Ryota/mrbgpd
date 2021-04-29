@@ -1,7 +1,7 @@
 use rtnetlink::packet::RouteMessage;
 use std::net::Ipv4Addr;
 use std::net::IpAddr;
-use crate::{bgp::{AutonomousSystemNumber, BgpUpdateMessage, PathAttribute}, routing::{self, IpPrefix}};
+use crate::{bgp::{AutonomousSystemNumber, BgpUpdateMessage, Origin, PathAttribute}, routing::{self, IpPrefix}};
 use std::cmp::PartialEq;
 use crate::bgp::AsPath;
 
@@ -70,13 +70,19 @@ impl Rib {
         }
     }
 
-    pub fn add_from_update_message(&mut self, update_message: BgpUpdateMessage, my_as_number: &AutonomousSystemNumber) {
+    pub fn add_from_update_message(&mut self, mut update_message: BgpUpdateMessage, my_as_number: &AutonomousSystemNumber) {
         let mut nexthop = Ipv4Addr::new(0, 0, 0, 0);
         for path_attribute in &update_message.path_attributes {
             match &path_attribute {
                 &PathAttribute::NextHop(ip_addr) => {
                     nexthop = *ip_addr;
                 },
+                _ => (),
+            }
+        }
+        for p in &mut update_message.path_attributes {
+            match p {
+                PathAttribute::Origin(origin) => *origin = Origin::Egp,
                 _ => (),
             }
         }
@@ -144,7 +150,19 @@ impl RoutingInformationEntry {
                             as_path.push(as_path_v);
                         }
                    };
-                }
+                },
+                _ => (),
+            }
+        }
+    }
+
+    pub fn change_origin(&mut self, origin_v: Origin) {
+        for p in &mut self.path_attributes {
+            match p {
+                PathAttribute::Origin(origin) => {
+                    *origin = origin_v.clone();
+                },
+                _ => (),
             }
         }
     }
