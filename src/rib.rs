@@ -4,7 +4,7 @@ use std::net::IpAddr;
 use crate::{bgp::{BgpUpdateMessage, PathAttribute}, routing::{self, IpPrefix}};
 use std::cmp::PartialEq;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Rib(pub Vec<RoutingInformationEntry>);
 
 impl Rib {
@@ -103,7 +103,7 @@ impl Rib {
         ()
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RoutingInformationEntry {
     pub nexthop: Ipv4Addr,
     pub destnation_address: IpPrefix,
@@ -117,7 +117,7 @@ impl PartialEq for RoutingInformationEntry {
     }
 }
 
-#[derive(Clone, Copy, std::cmp::PartialEq)]
+#[derive(Clone, Copy, std::cmp::PartialEq, Debug)]
 pub enum RoutingInformationStatus {
     Withdrawn,
     Updated,

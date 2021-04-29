@@ -443,6 +443,8 @@ impl fsm {
                         self.loc_rib.add_from_route_message(&mut routes);
                         if self.loc_rib.does_have_new_route() {
                             self.event_queue.push(Event::LocRibChanged);
+                        } else {
+                            println!("{:?}", self.loc_rib);
                         }
                     },
                     _ => {
