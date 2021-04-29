@@ -13,7 +13,9 @@ impl Rib {
     }
 
     pub fn add_from_route_message(&mut self, routing_information: &mut Vec<RouteMessage>) {
+        println!("now in Rib.add_from_route_message {:?}", routing_information);
         for rm in routing_information {
+            println!("one route message: {:?}", rm);
             if let Some(IpAddr::V4(gateway)) = rm.gateway() {
 
                 let destnation_address = match rm.destination_prefix() {
