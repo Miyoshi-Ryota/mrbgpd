@@ -99,6 +99,7 @@ impl fsm {
     }
 
     pub async fn handle_event(&mut self, event: &Event) {
+        println!("{:?}", event);
         match self.get_state() {
             &State::Idle => {
                 match event {
@@ -628,6 +629,7 @@ impl SessionAttribute {
     }
 }
 
+#[derive(Debug)]
 pub enum Event {
     // Administrative Event
     ManualStart, // Event 1
