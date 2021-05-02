@@ -5,6 +5,8 @@ pub mod bgp;
 pub mod finite_state_machine;
 pub mod routing;
 pub mod rib;
+pub mod peer;
+
 use std::{net::Ipv4Addr, str::FromStr, string::ParseError};
 use crate::bgp::AutonomousSystemNumber;
 use crate::routing::IpPrefix;

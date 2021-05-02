@@ -4,6 +4,7 @@ use std::{convert::TryInto, io, net::{TcpListener, TcpStream}};
 use std::{thread, time};
 use std::io::Read;
 use std::env;
+use mrbgpd::peer::BgpPeers;
 use bgp::bgp_packet_handler;
 use tokio;
 
@@ -41,12 +42,11 @@ impl DataBuffer {
 async fn main() {
     let filename: Vec<String> = env::args().collect();
     println!("{:?}", filename[1]);
-    let config = Config::parse_from_file(&filename[1]);
-    println!("{:?}", &config[0]);
+    let configs = Config::parse_from_file(&filename[1]);
+    println!("{:?}", &configs);
     let mut data_buffer = DataBuffer::new();
-    let tcp_listener = TcpListener::bind("0.0.0.0:179").expect("port 179が使用できません。");
-    // tcp_listener.set_nonblocking(true).unwrap();
-    let mut fsm = fsm::new(config[0].clone(), tcp_listener.try_clone().unwrap());
+    let mut bgp_peers = BgpPeers::new(configs);
+    let fsm = &mut bgp_peers.peers[0];
     fsm.event_queue.push(Event::ManualStart);
     loop {
         println!("{:?}", fsm.get_state());
