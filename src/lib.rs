@@ -8,8 +8,11 @@ pub mod rib;
 use std::{net::Ipv4Addr, str::FromStr, string::ParseError};
 use crate::bgp::AutonomousSystemNumber;
 use crate::routing::IpPrefix;
+use std::fs::File;
+use std::io::{self, BufRead};
+use std::path::Path;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
     as_number: AutonomousSystemNumber,
     my_ip_addr: Ipv4Addr,
@@ -32,14 +35,14 @@ impl FromStr for Mode {
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Mode {
     Active,
     Passive,
 }
 
 impl Config {
-    pub fn parse_args(args: Vec<String>) -> Config {
+    pub fn parse_args(args: Vec<&str>) -> Config {
         let as_number = AutonomousSystemNumber::new(
             args[1].parse().expect("cannot parse arg 1"));
         let my_ip_addr: Ipv4Addr = args[2].parse().expect("cannot parse arg 2");
@@ -58,4 +61,23 @@ impl Config {
             advertisement_network,
         }
     }
+
+    pub fn parse_from_file(filename: &str) -> Vec<Config> {
+        let mut result = vec![];
+        if let Ok(lines) = read_lines(filename) {
+            for line in lines {
+                if let Ok(ip) = line {
+                    let config_args: Vec<&str> = ip.split(" ").collect();
+                    result.push(Config::parse_args(config_args));
+                }
+            }
+        }
+        result
+    }
+}
+
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+where P: AsRef<Path>, {
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
 }
