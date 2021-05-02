@@ -8,35 +8,6 @@ use mrbgpd::peer::BgpPeers;
 use bgp::bgp_packet_handler;
 use tokio;
 
-struct DataBuffer {
-    pub buf: Vec<u8>,
-}
-
-impl DataBuffer {
-    pub fn new() -> Self {
-        let buf = vec![];
-        Self { buf }
-    }
-
-    fn retrieve_bgp_header_data(&mut self) -> Vec<u8>{
-        let bgp_header_length = 19;
-        let (bgp_header, buf) = self.buf.split_at(bgp_header_length);
-        let bgp_header = bgp_header.to_vec();
-        self.buf = buf.to_vec();
-        bgp_header
-    }
-
-    pub fn retrive_one_bgp_message(&mut self) -> Vec<u8> {
-        let mut bgp_message = self.retrieve_bgp_header_data();
-        let bgp_header_length = 19;
-        let next_bgp_message_length: u16 = u16::from_be_bytes(bgp_message[16..18].try_into().unwrap());
-        let (bgp_data, buf )= self.buf.split_at((next_bgp_message_length - bgp_header_length) as usize);
-        let mut bgp_data = bgp_data.to_vec();
-        self.buf = buf.to_vec();
-        bgp_message.append(&mut bgp_data);
-        bgp_message
-    }
-}
 
 #[tokio::main]
 async fn main() {
@@ -44,31 +15,36 @@ async fn main() {
     println!("{:?}", filename[1]);
     let configs = Config::parse_from_file(&filename[1]);
     println!("{:?}", &configs);
-    let mut data_buffer = DataBuffer::new();
+    // ToDo: Data BufferをFSMに持たせる
     let mut bgp_peers = BgpPeers::new(configs);
-    let fsm = &mut bgp_peers.peers[0];
-    fsm.event_queue.push(Event::ManualStart);
+    for fsm in &mut bgp_peers.peers {
+        fsm.event_queue.push(Event::ManualStart);
+    }
     loop {
-        println!("{:?}", fsm.get_state());
-        match fsm.event_queue.pop() {
-            Some(event) => fsm.handle_event(&event).await,
-            None => (),
+        for fsm in &mut bgp_peers.peers {
+            println!("{:?}", fsm.get_state());
+            match fsm.event_queue.pop() {
+                Some(event) => fsm.handle_event(&event).await,
+                None => (),
+            }
         }
-        let mut buf = vec![];
-        match fsm.tcp_connection.as_ref().unwrap().read_to_end(&mut buf) {
-             Ok(_) => {
+        for fsm in &mut bgp_peers.peers {
+            let mut buf = vec![];
+            match fsm.tcp_connection.as_ref().unwrap().read_to_end(&mut buf) {
+                Ok(_) => {
                  // Tcp connection is closed.
-             },
-             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                 data_buffer.buf.append(&mut buf);
-                 // Tcp connection is still open and there no data in socket.
-             }
-             Err(e) => {
-                 println!("other error happen: {:?}, : {:?}", e, buf);
-             }
-        }
-        if data_buffer.buf.len() > 0 {
-            bgp_packet_handler(&data_buffer.retrive_one_bgp_message(), &mut fsm.event_queue, &mut fsm.packet_queue);
+                },
+                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    fsm.data_buffer.buf.append(&mut buf);
+                    // Tcp connection is still open and there no data in socket.
+                },
+                Err(e) => {
+                    println!("other error happen: {:?}, : {:?}", e, buf);
+                }
+            }
+            if fsm.data_buffer.buf.len() > 0 {
+                bgp_packet_handler(&fsm.data_buffer.retrive_one_bgp_message(), &mut fsm.event_queue, &mut fsm.packet_queue);
+            }
         }
         thread::sleep(time::Duration::from_secs(1));
     }

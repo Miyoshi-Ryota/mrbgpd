@@ -1,5 +1,5 @@
 use crate::{Config, Mode, bgp::BgpKeepaliveMessage, bgp::BgpMessage, bgp::BgpOpenMessage, bgp::BgpUpdateMessage, routing::write_ip_v4_route};
-use std::{alloc::System, time::{Duration, SystemTime}};
+use std::{alloc::System, convert::TryInto, time::{Duration, SystemTime}};
 use std::net;
 use std::{thread, time};
 use net::{TcpListener, TcpStream};
@@ -31,6 +31,37 @@ pub struct fsm {
     loc_rib: LocRib,
     adj_rib_out: AdjRibOut,
     adj_rib_in: AdjRibIn,
+    pub data_buffer: DataBuffer,
+}
+
+pub struct DataBuffer {
+    pub buf: Vec<u8>,
+}
+
+impl DataBuffer {
+    pub fn new() -> Self {
+        let buf = vec![];
+        Self { buf }
+    }
+
+    fn retrieve_bgp_header_data(&mut self) -> Vec<u8>{
+        let bgp_header_length = 19;
+        let (bgp_header, buf) = self.buf.split_at(bgp_header_length);
+        let bgp_header = bgp_header.to_vec();
+        self.buf = buf.to_vec();
+        bgp_header
+    }
+
+    pub fn retrive_one_bgp_message(&mut self) -> Vec<u8> {
+        let mut bgp_message = self.retrieve_bgp_header_data();
+        let bgp_header_length = 19;
+        let next_bgp_message_length: u16 = u16::from_be_bytes(bgp_message[16..18].try_into().unwrap());
+        let (bgp_data, buf )= self.buf.split_at((next_bgp_message_length - bgp_header_length) as usize);
+        let mut bgp_data = bgp_data.to_vec();
+        self.buf = buf.to_vec();
+        bgp_message.append(&mut bgp_data);
+        bgp_message
+    }
 }
 
 pub struct Queue<T> {
@@ -67,7 +98,7 @@ impl fsm {
         let adj_rib_in = AdjRibIn::new(vec![]);
         let loc_rib = LocRib::new(vec![]);
         let adj_rib_out = AdjRibOut::new(vec![]);
-
+        let data_buffer = DataBuffer::new();
         Self {
             config,
             session_attribute,
@@ -79,6 +110,7 @@ impl fsm {
             adj_rib_in,
             loc_rib,
             adj_rib_out,
+            data_buffer,
         }
     }
 
