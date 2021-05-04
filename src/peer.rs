@@ -1,9 +1,10 @@
 use std::net::TcpListener;
 use std::net::SocketAddr;
 use crate::{Config, finite_state_machine::fsm};
-
+use crate::rib::{LocRib, AdjRibIn, AdjRibOut};
 pub struct BgpPeers {
-    pub peers: Vec<fsm>
+    pub peers: Vec<fsm>,
+    pub loc_rib: LocRib,
 }
 
 impl BgpPeers {
@@ -14,6 +15,7 @@ impl BgpPeers {
             let fsm = fsm::new(config, tcp_listener);
             peers.push(fsm);
         }
-        Self { peers }
+        let loc_rib = LocRib::new(vec![]);
+        Self { peers, loc_rib }
     }
 }

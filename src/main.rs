@@ -24,7 +24,7 @@ async fn main() {
         for fsm in &mut bgp_peers.peers {
             println!("{:?}", fsm.get_state());
             match fsm.event_queue.pop() {
-                Some(event) => fsm.handle_event(&event).await,
+                Some(event) => fsm.handle_event(&event, &mut bgp_peers.loc_rib).await,
                 None => (),
             }
         }

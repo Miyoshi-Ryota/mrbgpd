@@ -4,7 +4,7 @@ use futures::stream::{self, TryStreamExt};
 use std::{os::raw, str::FromStr};
 use std::net::{Ipv4Addr, IpAddr};
 use std::net::AddrParseError;
-use crate::rib::LocRib;
+use crate::rib::{LocRib, RoutingInformationStatus, UpdateStatus};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IpPrefix {
@@ -138,15 +138,18 @@ pub async fn get_all_ip_v4_routes() -> Result<Vec<RouteMessage>, Error> {
     Ok(result)
 }
 
-pub async fn write_ip_v4_route(loc_rib: &LocRib) {
+pub async fn write_ip_v4_route(loc_rib: &mut LocRib) {
     let (connection, handle, _) = new_connection().unwrap();
     tokio::spawn(connection);
-    for entry in &loc_rib.0 {
-        let mut add_request = handle.route().add().v4();
-        let destnation = &entry.destnation_address;
-        let gateway = &entry.nexthop;
-        let ret = add_request.protocol(3).destination_prefix(destnation.network_address.clone(), destnation.prefix_length.clone()).gateway(gateway.clone()).execute().await;
-        ret.unwrap();
+    for entry in &mut loc_rib.0 {
+        if entry.update_status == UpdateStatus::ShouldUpdate && entry.status == RoutingInformationStatus::Updated {
+            let mut add_request = handle.route().add().v4();
+            let destnation = &entry.destnation_address;
+            let gateway = &entry.nexthop;
+            let ret = add_request.protocol(3).destination_prefix(destnation.network_address.clone(), destnation.prefix_length.clone()).gateway(gateway.clone()).execute().await;
+            ret.unwrap();
+            entry.update_status = UpdateStatus::Updated;
+        }
     }
     ()
 }

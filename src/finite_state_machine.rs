@@ -28,7 +28,6 @@ pub struct fsm {
     packet_buffer: [u8; 1024],
     pub event_queue: EventQueue,
     pub packet_queue: PacketQueue,
-    loc_rib: LocRib,
     adj_rib_out: AdjRibOut,
     adj_rib_in: AdjRibIn,
     pub data_buffer: DataBuffer,
@@ -96,7 +95,6 @@ impl fsm {
         let packet_buffer = [0u8; 1024];
         let packet_queue = PacketQueue::new();
         let adj_rib_in = AdjRibIn::new(vec![]);
-        let loc_rib = LocRib::new(vec![]);
         let adj_rib_out = AdjRibOut::new(vec![]);
         let data_buffer = DataBuffer::new();
         Self {
@@ -108,19 +106,19 @@ impl fsm {
             event_queue,
             packet_queue,
             adj_rib_in,
-            loc_rib,
             adj_rib_out,
             data_buffer,
         }
     }
 
-    fn phase3_disseminate_route(&mut self) {
+    fn phase3_disseminate_route(&mut self, loc_rib: &LocRib) {
         // ToDo: nexthopが存在するかなどのチェックや、
         // ルートが消えることのチェックを行っていない。
-        let mut loc_rib = self.loc_rib.clone();
+        let mut loc_rib = loc_rib.clone();
         self.adj_rib_out.change_state_of_all_routing_information_to_unchanged();
         for entry in &mut loc_rib.0 {
             entry.add_as_path(self.config.as_number.0);
+            entry.change_nexthop(self.config.my_ip_addr);
         }
         self.adj_rib_out.add(loc_rib.0);
     }
@@ -133,7 +131,7 @@ impl fsm {
         self.session_attribute.get_state()
     }
 
-    pub async fn handle_event(&mut self, event: &Event) {
+    pub async fn handle_event(&mut self, event: &Event, loc_rib: &mut LocRib) {
         println!("{:?}", event);
         match self.get_state() {
             &State::Idle => {
@@ -480,12 +478,8 @@ impl fsm {
                         let next_hop = PathAttribute::NextHop(self.config.my_ip_addr);
                         let path_attributes = vec![origin, as_path, next_hop];
 
-                        self.loc_rib.add_from_route_message(&mut routes, path_attributes);
-                        if self.loc_rib.does_have_new_route() {
-                            self.event_queue.push(Event::LocRibChanged);
-                        } else {
-                            println!("{:?}", self.loc_rib);
-                        }
+                        loc_rib.add_from_route_message(&mut routes, path_attributes);
+                        self.event_queue.push(Event::LocRibChanged);
                     },
                     _ => {
                         // In response to any other event (Events 9, 12-13, 20, 27-28), the
@@ -611,22 +605,21 @@ impl fsm {
                         // Nexthopがいないのをfilterするだけで良い
                         // Adj-Rib-In => LocRib;
                         let mut adj_rib_in = vec![];
-                        self.loc_rib.change_state_of_all_routing_information_to_unchanged();
                         for entry in self.adj_rib_in.0.clone() {
                             if !entry.get_as_path().get_seq().contains(&self.config.as_number.0) {
                                 adj_rib_in.push(entry);
                             }
                         }
-                        self.loc_rib.add(adj_rib_in);
+                        loc_rib.add(adj_rib_in);
                         // Routing Table に書き込む処理を追加する
-                        if self.loc_rib.does_have_new_route() {
-                            write_ip_v4_route(&self.loc_rib).await;
+                        if loc_rib.does_have_should_update_route() {
+                            write_ip_v4_route(loc_rib).await;
                             self.event_queue.push(Event::LocRibChanged);
                         }
                     },
                     &Event::LocRibChanged => {
                         // Kick Phase 3 (LocRib => Adj-RIB-Out);
-                        self.phase3_disseminate_route();
+                        self.phase3_disseminate_route(loc_rib);
                         if self.adj_rib_out.does_have_new_route() {
                             self.event_queue.push(Event::AdjRibOutChanged);
                         }
