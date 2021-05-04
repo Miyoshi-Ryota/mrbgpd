@@ -120,7 +120,12 @@ impl fsm {
             entry.add_as_path(self.config.as_number.0);
             entry.change_nexthop(self.config.my_ip_addr);
         }
-        self.adj_rib_out.add(loc_rib.0);
+        // remote as がas pathにはいってたらriboutに追加しない
+        for entry in loc_rib.0 {
+            if !entry.get_as_path().does_have_the_as_number(&self.config.remote_as_number) {
+                self.adj_rib_out.add_one_entry(entry);
+            }
+        }
     }
 
     fn send_update_message(&self) {

@@ -46,6 +46,10 @@ impl Rib {
         }
     }
 
+    pub fn add_one_entry(&mut self, one_route: RoutingInformationEntry) {
+        self.add_if_needed(one_route);
+    }
+
     fn add_if_needed(&mut self, one_route: RoutingInformationEntry) {
         if !self.0.contains(&one_route) {
             self.0.push(one_route);
