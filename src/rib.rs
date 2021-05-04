@@ -64,9 +64,24 @@ impl Rib {
         return false
     }
 
+    pub fn does_have_should_update_route(&self) -> bool {
+        for route in &self.0 {
+            if route.update_status == UpdateStatus::ShouldUpdate {
+                return true
+            }
+        }
+        return false
+    }
+
     pub fn change_state_of_all_routing_information_to_unchanged(&mut self) {
         for entry in &mut self.0 {
             entry.status = RoutingInformationStatus::UnChanged;
+        }
+    }
+
+    pub fn change_update_state_of_all_routing_information_to_updated(&mut self) {
+        for entry in &mut self.0 {
+            entry.update_status = UpdateStatus::Updated;
         }
     }
 
@@ -106,6 +121,7 @@ pub struct RoutingInformationEntry {
     pub destnation_address: IpPrefix,
     pub status: RoutingInformationStatus,
     pub path_attributes: Vec<PathAttribute>,
+    pub update_status: UpdateStatus,
 }
 
 impl PartialEq for RoutingInformationEntry {
@@ -122,10 +138,16 @@ pub enum RoutingInformationStatus {
     UnChanged,
 }
 
+#[derive(Clone, Copy, std::cmp::PartialEq, Debug)]
+pub enum UpdateStatus {
+    ShouldUpdate,
+    Updated
+}
+
 impl RoutingInformationEntry {
 
     pub fn new(nexthop: Ipv4Addr, destnation_address: IpPrefix, status: RoutingInformationStatus, path_attributes: Vec<PathAttribute>) -> Self {
-        Self {nexthop, destnation_address, status, path_attributes}
+        Self {nexthop, destnation_address, status, path_attributes, update_status: UpdateStatus::ShouldUpdate}
     }
 
     pub fn get_as_path(&self) -> &AsPath {
@@ -151,6 +173,17 @@ impl RoutingInformationEntry {
                         }
                    };
                 },
+                _ => (),
+            }
+        }
+    }
+
+    pub fn change_nexthop(&mut self, nexthop: Ipv4Addr) {
+        for p in &mut self.path_attributes {
+            match p {
+                PathAttribute::NextHop(n) => {
+                    *n = nexthop;
+                }
                 _ => (),
             }
         }
